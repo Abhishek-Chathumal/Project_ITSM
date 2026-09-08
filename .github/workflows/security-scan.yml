@@ -139,13 +139,49 @@ jobs:
           vid: ${{ secrets.VERACODE_API_ID }}
           vkey: ${{ secrets.VERACODE_API_KEY }}
           file: veracode-artifacts/veracode-app.zip
-          fail_on_severity: 'Very High, High'
+          # The embedded double quotes are load-bearing. The action appends every input
+          # to the CLI command unquoted (only `include` is special-cased), so a bare
+          # `Very High, High` word-splits: the Java arg parser takes "Very" as the value
+          # and rejects the remainder, aborting the whole scan. Quoting it here keeps it
+          # a single argument.
+          fail_on_severity: '"Very High, High"'
           fail_build: true
+          # `fail_build` alone is not enough: it only trips when the scan *output* matches
+          # /FAILURE: Found \d+ issues!/, so a scan that never ran leaves the job green.
+          fail_build_error: true
           issue_details: true
           summary_display: true
           project_name: ${{ github.repository }}
           project_url: ${{ github.server_url }}/${{ github.repository }}
           project_ref: ${{ github.ref }}
+
+      # Belt and braces over the action's own failure handling, which is output-regex
+      # based and stayed green through a scan that aborted on a malformed argument. A
+      # security gate that passes without inspecting anything is worse than no gate, so
+      # assert the scan genuinely produced results before letting the job succeed.
+      - name: Verify the scan actually ran
+        if: always()
+        run: |
+          if [ ! -s results.json ]; then
+            echo '::error::Veracode produced no results.json — the scan did not run. Failing rather than reporting a pass that inspected nothing.'
+            exit 1
+          fi
+          node -e '
+            const fs = require("fs");
+            let r;
+            try {
+              r = JSON.parse(fs.readFileSync("results.json", "utf8"));
+            } catch (e) {
+              console.error("::error::results.json is not valid JSON — the scan did not complete: " + e.message);
+              process.exit(1);
+            }
+            const findings = Array.isArray(r.findings) ? r.findings : null;
+            if (!r.scan_id && findings === null) {
+              console.error("::error::results.json has neither scan_id nor a findings array — the scan did not complete.");
+              process.exit(1);
+            }
+            console.log("Scan completed. Findings reported: " + (findings ? findings.length : "unknown"));
+          '
 
   # The full policy scan is slow (tens of minutes), so it never runs on a PR — only on
   # main and on the weekly schedule. This is the one that produces the compliance result.
