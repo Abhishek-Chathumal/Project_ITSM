@@ -1,6 +1,6 @@
 # The In-House IT Support Portal — Development Constitution
 
-**Version:** 1.0
+**Version:** 1.1
 **Status:** Foundational specification — governs all development decisions
 **Framework Alignment:** ITIL 4
 **Reference Systems:** Motadata ServiceOps, ServiceNow, Jira Service Management
@@ -777,7 +777,12 @@ Each phase ends with a demo against this document's relevant Part, and any devia
 - **Integration tests:** API endpoints against a real test database (containerized Postgres), including RBAC enforcement tests (a Requester token must never succeed on an Admin-only endpoint).
 - **E2E tests:** critical user journeys (raise ticket → agent resolves → CSAT) via Playwright, run against a staging build in CI.
 - **Automation engine tests:** rule evaluation is pure-function testable — every Trigger/Condition/Action combination used in seed data must have a test.
-- **Security testing:** dependency vulnerability scanning in CI, periodic manual review of RBAC matrix vs. Part V.
+- **Security testing:** automated security scanning in CI plus periodic manual review of the RBAC matrix vs. Part V. Specifically:
+  - **SAST** on every pull request (fast pipeline scan, blocking on High and above) and a full policy scan on `main` and weekly.
+  - **SCA** — dependency vulnerability scanning, covering both the advisory feed and license posture.
+  - **Secret scanning** on every push.
+  - **DAST** — deferred until a hosted environment exists; it becomes a release gate at the cloud-hosting milestone, not before. See ADR-0014.
+  - A scan finding that is not a genuine defect is dismissed with a written mitigation rationale, never left unreviewed. A gate nobody trusts is worse than no gate.
 - **Seed data:** a fixture set (users across all roles, sample tickets in every status, sample assets) so every environment demoes identically.
 
 ---
