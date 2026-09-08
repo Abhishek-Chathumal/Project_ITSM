@@ -11,7 +11,14 @@ A self-hosted, ITIL4-aligned ITSM platform (incident, request, problem, change, 
 - **Monorepo:** npm workspaces + Turborepo
 - **Deployment:** Docker Compose (fully self-hosted — no mandatory third-party SaaS)
 
-Architecture decisions are recorded in [`docs/adr/`](./docs/adr/).
+## Documentation
+
+| Doc                                                                                                    | What                                                               |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| [`docs/Support_Portal_Development_Constitution.md`](./docs/Support_Portal_Development_Constitution.md) | The governing specification — source of truth for scope and design |
+| [`docs/PROJECT_STATE.md`](./docs/PROJECT_STATE.md)                                                     | Current state, history, known debt, roadmap                        |
+| [`docs/adr/`](./docs/adr/)                                                                             | Architecture Decision Records                                      |
+| [`CLAUDE.md`](./CLAUDE.md)                                                                             | Working brief and conventions (auto-loaded by Claude Code)         |
 
 ## Quick start (Docker — recommended)
 
