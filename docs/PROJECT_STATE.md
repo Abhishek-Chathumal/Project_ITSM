@@ -142,6 +142,9 @@ both smoke jobs exist now.
 
 ## 5. Roadmap
 
+> **Detailed, execution-ready breakdown: [`PHASE_PLAN.md`](PHASE_PLAN.md).**
+> The summary below is the shape; that document is what to work from.
+
 ### Constitution phases (Part XII)
 
 | Phase | Scope                                                                                                                          |
