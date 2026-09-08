@@ -7,6 +7,10 @@ Browser-based, desktop + mobile friendly. Destined for cloud hosting once mature
 The governing spec is [`docs/Support_Portal_Development_Constitution.md`](docs/Support_Portal_Development_Constitution.md).
 It is the source of truth — read the relevant Part before designing a feature.
 Detailed project history, current state, and roadmap: [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md).
+Day-to-day workflow (machines, git, file uploads): [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
+
+Slash commands: **`/update-state`** refreshes the project docs; **`/handoff`** does that
+plus verify, commit, and push — the end-of-session ritual before switching machines.
 
 **Status: Phase 0 (Foundation) complete and running.** Phase 1 (ticketing) not started.
 
