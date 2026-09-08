@@ -6,32 +6,89 @@
  * Nord palette (https://www.nordtheme.com) — Polar Night (nord0-3), Snow Storm
  * (nord4-6), Frost (nord7-10), Aurora (nord11-15). Values below are RGB triplets
  * (no commas) so Tailwind's `rgb(var(--x) / <alpha-value>)` pattern can apply opacity.
+ *
+ * Everything here is a token. A restyle is an edit to this file, not to components —
+ * keep it that way, because the maintainer expects heavy UI churn and the security
+ * core must never be entangled with presentation.
+ *
+ * Semantic tokens (success/warning/danger/info/accent) exist so that a status or
+ * priority is expressed by *meaning* rather than by a literal colour at the call site.
+ * Each has a `-subtle` companion for badge/tile backgrounds that must stay legible
+ * behind foreground text in both themes.
  */
 :root {
-  --background: 229 233 240; /* nord5 */
-  --foreground: 46 52 64; /* nord0 */
-  --card: 236 239 244; /* nord6 */
-  --border: 216 222 233; /* nord4 */
+  /* Nord's light end is all high-value blues, so using two adjacent Snow Storm steps
+     for page and card left surfaces indistinguishable. Cards and chrome are white and
+     the page sits a step below them, which is what actually separates content from
+     background here. */
+  --background: 236 239 244; /* nord6  */
+  --foreground: 46 52 64; /* nord0  */
+  --card: 255 255 255;
+  --border: 216 222 233; /* nord4  */
   --primary: 94 129 172; /* nord10 */
-  --primary-foreground: 236 239 244; /* nord6 */
-  --muted: 216 222 233; /* nord4 */
-  --muted-foreground: 76 86 106; /* nord3 */
+  --primary-foreground: 236 239 244; /* nord6  */
+  --muted: 229 233 240; /* nord5  */
+  --muted-foreground: 76 86 106; /* nord3  */
   --destructive: 191 97 106; /* nord11 */
+
+  /* Layered surfaces. The sidebar is chrome, so it shares the card surface rather than
+     the page; `hover` is a single shared interaction tint. */
+  --sidebar: 255 255 255;
+  --hover: 229 233 240; /* nord5  */
+  --ring: 94 129 172; /* nord10 */
+
+  /* Semantic status colours (Aurora + Frost). */
+  --success: 121 148 106; /* nord14, darkened for contrast on light */
+  --success-subtle: 214 226 205;
+  --warning: 181 142 65; /* nord13, darkened for contrast on light */
+  --warning-subtle: 245 231 201;
+  --danger: 191 97 106; /* nord11 */
+  --danger-subtle: 240 214 216;
+  --info: 94 129 172; /* nord10 */
+  --info-subtle: 213 224 238;
+  --accent: 148 108 141; /* nord15, darkened for contrast on light */
+  --accent-subtle: 233 220 231;
 }
 
 .dark {
-  --background: 46 52 64; /* nord0 */
-  --foreground: 236 239 244; /* nord6 */
-  --card: 59 66 82; /* nord1 */
-  --border: 67 76 94; /* nord2 */
-  --primary: 136 192 208; /* nord8 */
-  --primary-foreground: 46 52 64; /* nord0 */
-  --muted: 59 66 82; /* nord1 */
-  --muted-foreground: 216 222 233; /* nord4 */
+  --background: 46 52 64; /* nord0  */
+  --foreground: 236 239 244; /* nord6  */
+  --card: 59 66 82; /* nord1  */
+  --border: 67 76 94; /* nord2  */
+  --primary: 136 192 208; /* nord8  */
+  --primary-foreground: 46 52 64; /* nord0  */
+  --muted: 59 66 82; /* nord1  */
+  --muted-foreground: 216 222 233; /* nord4  */
   --destructive: 191 97 106; /* nord11 */
+
+  --sidebar: 59 66 82; /* nord1  */
+  --hover: 67 76 94; /* nord2  */
+  --ring: 136 192 208; /* nord8  */
+
+  /* On Polar Night the Aurora hues are already legible, so these are the palette
+     values themselves; the `-subtle` fills are dark, low-chroma companions. */
+  --success: 163 190 140; /* nord14 */
+  --success-subtle: 58 72 58;
+  --warning: 235 203 139; /* nord13 */
+  --warning-subtle: 78 70 48;
+  --danger: 191 97 106; /* nord11 */
+  --danger-subtle: 78 50 54;
+  --info: 136 192 208; /* nord8  */
+  --info-subtle: 45 66 76;
+  --accent: 180 142 173; /* nord15 */
+  --accent-subtle: 70 55 68;
 }
 
 body {
   background-color: rgb(var(--background));
   color: rgb(var(--foreground));
+}
+
+/* A single visible focus treatment for every interactive element. Keyboard users get a
+   ring; pointer users don't see one on click. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid rgb(var(--ring));
+    outline-offset: 2px;
+  }
 }

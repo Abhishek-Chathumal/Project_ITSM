@@ -14,6 +14,9 @@ import type { TestingLibraryMatchers } from '@testing-library/jest-dom/matchers'
 declare module 'vitest' {
   interface Matchers<
     R extends void | Promise<void> = void | Promise<void>,
+    // `T` is unused here but cannot be dropped: a declaration merge applies only when
+    // the type-parameter list matches the original, and vitest declares Matchers<R, T>.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     T = unknown,
   > extends TestingLibraryMatchers<unknown, R> {}
 }

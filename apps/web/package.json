@@ -15,15 +15,16 @@
     "@itsm/shared": "*",
     "@tanstack/react-query": "^5.59.0",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^2.5.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.18.3",
+    "tailwind-merge": "^2.5.2",
     "zustand": "^4.5.5"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@types/react": "^18.3.10",
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",

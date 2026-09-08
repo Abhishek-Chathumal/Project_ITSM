@@ -3,7 +3,8 @@
 Living record of where this project stands, how it got here, and what comes next.
 **Update this at the end of any significant work session.**
 
-Last updated: 2026-09-09 · Phase 0 complete; dependency/security pass done; Phase 1 not started.
+Last updated: 2026-09-09 · Phase 0 complete; dependency/security pass and UI shell done;
+Phase 1 ticketing not started.
 
 ---
 
@@ -81,10 +82,25 @@ One migration exists: `20260908054618_init`.
 
 ### Frontend (`apps/web`, React + Vite + Tailwind)
 
-Login page, protected shell (top bar + collapsible side nav), dashboard placeholder.
-Nord palette, light/dark toggle persisted to `localStorage`. React Query for server state,
-Zustand for UI-only state. Nav items for Tickets / Service Catalog / Assets are visible but
-disabled; Reports / Admin are permission-gated.
+Login page plus a protected app shell, rebuilt in a ServiceOps-inspired language
+(ADR-0013). React Query for server state, Zustand for UI-only state.
+
+- **Shell** — permission-gated sidebar driven by the `NAV_SECTIONS` data model in
+  `components/layout/nav-items.ts`, collapsible to an icon rail (persisted) and an
+  overlay drawer on mobile; top bar with create menu, theme toggle and account menu; a
+  shared `PageHeader`. Modules that don't exist yet render disabled with a "Soon" tag
+  rather than as dead links.
+- **Primitives** (`components/ui`) — `Badge`/`StatusDot`/`IdChip`, `Avatar`, `Table`,
+  `Tabs`/`TabPanel`, `DropdownMenu`, `StatTile`, `IconButton`,
+  `Skeleton`/`EmptyState`/`ErrorState`, `Button`, `Card`, `Input`, `Switch`. No UI
+  library — see ADR-0013 for when that should change.
+- **Tokens** — Nord, extended with semantic `success`/`warning`/`danger`/`info`/`accent`
+  tones (each with a `-subtle` fill) plus `sidebar`/`hover`/`ring`. Components take a
+  `tone`, never a colour, so a restyle is an edit to `styles/globals.css`.
+- **Dashboard** — live counts from the Phase 0 endpoints (users, roles, permissions,
+  audit events), each query gated on the caller's permission; a recent-activity table off
+  the audit trail; and the signed-in user's granted permissions. Ticket metrics read
+  "Phase 1" rather than a fabricated `0`.
 
 ### Infra & CI
 
@@ -94,8 +110,10 @@ disabled; Reports / Admin are permission-gated.
   on `actions/checkout@v7` / `setup-node@v7` and Node 22.
 - The API runtime image is a production-only install (`prod-deps` stage, ADR-0011); the
   dev stack masks every workspace `node_modules` with a named volume (gotcha 7).
-- Tests: `PermissionGuard` and `AllExceptionsFilter` unit tests (api), login page render
-  test (web). **Coverage is still thin — expanding it is Phase 1 work.**
+- Tests: `PermissionGuard` and `AllExceptionsFilter` unit tests (api); login page render,
+  `SideNav` permission gating, `DropdownMenu` keyboard/focus behaviour, `StatTile`
+  loading-vs-zero and `initialsOf` (web) — 20 web tests, up from 1. **Still no
+  integration or E2E coverage; that remains Phase 1 work.**
 
 ---
 
@@ -141,6 +159,22 @@ Verified by bringing both stacks up locally on isolated ports and a separate com
 project: health, CSRF, RBAC (200 with permission, 401 without), audit rows written, the
 Vite `/api` proxy, and a full login whose `/auth/login` and `/auth/me` payloads are
 byte-identical — the Phase 0 crash that is easiest to reintroduce.
+
+### The UI shell (2026-09-09)
+
+Prompted by the maintainer supplying Motadata ServiceOps screenshots as a reference for
+density and layout. Phase 0's frontend was a placeholder — a text-only sidebar with no
+routing and a one-paragraph dashboard — and Phase 1 needs list views, detail layouts and
+status indicators that did not exist.
+
+Built the shell and the reusable primitive layer, in-house on the Nord tokens rather than
+adopting a component library (**ADR-0013** covers the reasoning, and names focus-trapped
+modals / comboboxes / date pickers as the point where that should be revisited). See the
+Frontend section above for what exists. Verified in a real browser against a running
+stack, in both themes, at rail and expanded widths.
+
+What was deliberately **not** built: the Tickets list and ticket-detail screens. Those
+belong with the Phase 1 backend, and the primitives they need are now in place.
 
 ### Bugs found and fixed (all caught by running it for real, not by tests)
 
