@@ -8,6 +8,7 @@ The governing spec is [`docs/Support_Portal_Development_Constitution.md`](docs/S
 It is the source of truth — read the relevant Part before designing a feature.
 Detailed project history, current state, and roadmap: [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md).
 Day-to-day workflow (machines, git, file uploads): [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
+What each phase delivers, sliced for execution: [`docs/PHASE_PLAN.md`](docs/PHASE_PLAN.md).
 
 Slash commands: **`/update-state`** refreshes the project docs; **`/handoff`** does that
 plus verify, commit, and push — the end-of-session ritual before switching machines.
