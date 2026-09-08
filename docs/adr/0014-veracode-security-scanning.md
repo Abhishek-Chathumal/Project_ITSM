@@ -86,6 +86,8 @@ Veracode's PR-time feedback proves too slow.
   were all dev-only and would not have been caught. Recorded in PROJECT_STATE §4.
 - The **policy scan remains unvalidated** until this lands on `main`, since it is the one
   job that never runs on a PR. Expect to iterate on it once.
+- Adding a commercial dependency to CI means scans stop if the licence lapses. The jobs
+  skip rather than fail in that case, so the loss would be quiet — worth noticing.
 
 ### What the first runs actually taught
 
@@ -105,6 +107,3 @@ Worth keeping, because both failures were silent and both looked like success:
 The generalisation: **a security tool's default failure mode is a confident pass over
 nothing.** Never accept a green scan that has not been shown to fail on purpose, and read
 the coverage numbers, not just the verdict.
-
-- Adding a commercial dependency to CI means scans stop if the licence lapses. The jobs
-  skip rather than fail in that case, so the loss would be quiet — worth noticing.
