@@ -191,6 +191,22 @@ jobs:
             console.log("Scan completed. Findings reported: " + (findings ? findings.length : "unknown"));
           '
 
+      # The action only publishes filtered_results.json — the findings that breached the
+      # gate. Everything below it (today: one Medium) exists solely in the job log, which
+      # ages out. Part XIII requires sub-gate findings to be reviewed rather than
+      # accumulate unseen, and a dismissal to carry a written rationale; neither is
+      # possible against a file nobody kept. results.json holds the complete set.
+      - name: Publish the full findings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sast-findings
+          path: |
+            results.json
+            filtered_results.json
+          retention-days: 30
+          if-no-files-found: warn
+
   # The full policy scan is slow (tens of minutes), so it never runs on a PR — only on
   # main and on the weekly schedule. This is the one that produces the compliance result.
   sast-policy:
