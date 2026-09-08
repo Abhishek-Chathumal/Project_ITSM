@@ -24,7 +24,7 @@ Note this passed `docker build` cleanly. Only _running_ the container surfaced i
 
 ## Decision
 
-- `infra/docker/api.Dockerfile` builds on **`node:20-bookworm-slim`** (glibc, OpenSSL 3.x),
+- `infra/docker/api.Dockerfile` builds on **`node:22-bookworm-slim`** (glibc, OpenSSL 3.x),
   matching Prisma's well-supported `debian-openssl-3.0.x` target. `openssl` and
   `ca-certificates` are installed explicitly because the `-slim` images omit them.
 - `schema.prisma` pins `binaryTargets = ["native", "debian-openssl-3.0.x"]` so the correct

@@ -22,7 +22,15 @@ services:
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-ChangeMe123!}
     volumes:
       - .:/repo
+      # Every node_modules the container resolves through must be a named volume, not the
+      # bind mount. The host's copies are built for the host's OS/libc — on Windows they
+      # are .cmd/.ps1 shims that die inside the container with "node.exe: not found", and
+      # on Linux they are still the wrong native binaries. Masking only the root is not
+      # enough: npm nests a package under a workspace whenever a version can't be hoisted,
+      # and which packages those are changes with any dependency bump.
       - api_node_modules:/repo/node_modules
+      - api_app_node_modules:/repo/apps/api/node_modules
+      - api_shared_node_modules:/repo/packages/shared/node_modules
     ports:
       - '3000:3000'
       - '9229:9229'
@@ -41,10 +49,19 @@ services:
       DEV_API_PROXY_TARGET: http://api:3000
     volumes:
       - .:/repo
+      # See the api service above. This bit the web container first: npm hoisted vite to
+      # the root node_modules until the vite 8 upgrade, then nested it under apps/web —
+      # where the bind mount shadowed the image's Linux install with the host's.
       - web_node_modules:/repo/node_modules
+      - web_app_node_modules:/repo/apps/web/node_modules
+      - web_shared_node_modules:/repo/packages/shared/node_modules
     ports:
       - '5173:5173'
 
 volumes:
   api_node_modules:
+  api_app_node_modules:
+  api_shared_node_modules:
   web_node_modules:
+  web_app_node_modules:
+  web_shared_node_modules:

@@ -47,7 +47,7 @@ Web is served on `:8080`, API on `:3000` directly.
 
 ## Quick start (without Docker)
 
-Requires Node 20+, PostgreSQL 15+, Redis 7+ running locally.
+Requires Node 22+, PostgreSQL 15+, Redis 7+ running locally.
 
 ```bash
 npm ci
