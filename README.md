@@ -17,6 +17,7 @@ A self-hosted, ITIL4-aligned ITSM platform (incident, request, problem, change, 
 | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
 | [`docs/Support_Portal_Development_Constitution.md`](./docs/Support_Portal_Development_Constitution.md) | The governing specification — source of truth for scope and design |
 | [`docs/PROJECT_STATE.md`](./docs/PROJECT_STATE.md)                                                     | Current state, history, known debt, roadmap                        |
+| [`docs/WORKFLOW.md`](./docs/WORKFLOW.md)                                                               | Daily workflow: machines, git, adding files, usage tips            |
 | [`docs/adr/`](./docs/adr/)                                                                             | Architecture Decision Records                                      |
 | [`CLAUDE.md`](./CLAUDE.md)                                                                             | Working brief and conventions (auto-loaded by Claude Code)         |
 
