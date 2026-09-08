@@ -127,6 +127,14 @@ jobs:
     if: needs.preflight.outputs.has_sast == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # The action posts its scan summary as a PR comment, which is where the findings are
+    # actually useful. Without this it logs
+    # "HttpError: Resource not accessible by integration" and the summary is buried in
+    # the job output. Scoped to this job rather than the workflow, and harmless on fork
+    # PRs — GitHub issues those a read-only token regardless of what is requested here.
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -237,6 +245,11 @@ jobs:
           SRCCLR_API_TOKEN: ${{ secrets.SRCCLR_API_TOKEN }}
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Required for an npm-workspaces monorepo. Without it the agent reads only the
+          # root package.json and reports "Direct Libraries 0 / Total 184" against a tree
+          # that actually resolves ~950 packages — it never sees apps/api or apps/web, so
+          # a clean result would say nothing about the dependencies that matter.
+          recursive: true
           # Findings are reported in the job log rather than opened as GitHub issues.
           # Auto-filing issues on a public repo would publish the vulnerability inventory
           # of a running deployment; revisit once there is a private triage destination.
