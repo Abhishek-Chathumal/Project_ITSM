@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Nord palette (https://www.nordtheme.com) — Polar Night (nord0-3), Snow Storm
+ * (nord4-6), Frost (nord7-10), Aurora (nord11-15). Values below are RGB triplets
+ * (no commas) so Tailwind's `rgb(var(--x) / <alpha-value>)` pattern can apply opacity.
+ */
+:root {
+  --background: 229 233 240; /* nord5 */
+  --foreground: 46 52 64; /* nord0 */
+  --card: 236 239 244; /* nord6 */
+  --border: 216 222 233; /* nord4 */
+  --primary: 94 129 172; /* nord10 */
+  --primary-foreground: 236 239 244; /* nord6 */
+  --muted: 216 222 233; /* nord4 */
+  --muted-foreground: 76 86 106; /* nord3 */
+  --destructive: 191 97 106; /* nord11 */
+}
+
+.dark {
+  --background: 46 52 64; /* nord0 */
+  --foreground: 236 239 244; /* nord6 */
+  --card: 59 66 82; /* nord1 */
+  --border: 67 76 94; /* nord2 */
+  --primary: 136 192 208; /* nord8 */
+  --primary-foreground: 46 52 64; /* nord0 */
+  --muted: 59 66 82; /* nord1 */
+  --muted-foreground: 216 222 233; /* nord4 */
+  --destructive: 191 97 106; /* nord11 */
+}
+
+body {
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
+}

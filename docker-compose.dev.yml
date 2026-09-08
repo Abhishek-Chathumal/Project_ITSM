@@ -1,0 +1,46 @@
+services:
+  postgres:
+    ports:
+      - '5432:5432'
+
+  redis:
+    ports:
+      - '6379:6379'
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+      target: deps
+    command: sh -c "npm run build -w @itsm/shared && cd apps/api && npx prisma generate && npx prisma migrate deploy && npx prisma db seed && npx nest start --watch"
+    environment:
+      NODE_ENV: development
+      CORS_ORIGIN: http://localhost:5173
+      COOKIE_SECURE: 'false'
+      SEED_BOOTSTRAP_ADMIN: 'true'
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@example.com}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-ChangeMe123!}
+    volumes:
+      - .:/repo
+      - api_node_modules:/repo/node_modules
+    ports:
+      - '3000:3000'
+      - '9229:9229'
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+      target: deps
+    command: sh -c "npm run build -w @itsm/shared && npm run dev -w apps/web -- --host 0.0.0.0"
+    environment:
+      VITE_API_BASE_URL: /api/v1
+    volumes:
+      - .:/repo
+      - web_node_modules:/repo/node_modules
+    ports:
+      - '5173:5173'
+
+volumes:
+  api_node_modules:
+  web_node_modules:
