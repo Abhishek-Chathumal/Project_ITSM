@@ -1,0 +1,207 @@
+name: security-scan
+
+# Veracode SAST + SCA. Kept out of ci.yml because it runs on a different cadence and,
+# unlike the rest of CI, it depends on credentials that live outside the repo.
+#
+# SECURITY: the trigger is `pull_request`, never `pull_request_target`. This repo is
+# public, so anyone can open a PR from a fork. GitHub withholds secrets from fork PRs on
+# `pull_request`; `pull_request_target` would run with secrets available to code the fork
+# controls, which would hand out the Veracode credentials. Fork PRs therefore show these
+# jobs as skipped — that is correct, not a failure.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   VERACODE_API_ID   HMAC API ID      -> SAST (pipeline + policy scans)
+#   VERACODE_API_KEY  HMAC secret key  -> SAST (pipeline + policy scans)
+#   SRCCLR_API_TOKEN  SCA agent token  -> SCA only; optional, that job skips without it
+#
+# Every job is gated on the relevant secret being present, so merging this cannot break
+# CI before the secrets are configured — the jobs report as skipped until then.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Weekly full policy scan, Mondays 03:17 UTC. Off-peak and off the hour, because
+    # scheduled jobs on the hour queue behind everyone else's.
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: security-scan-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # `secrets` is not available in a job-level `if`, so presence has to be resolved in a
+  # step and passed on as an output.
+  preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      has_sast: ${{ steps.check.outputs.has_sast }}
+      has_sca: ${{ steps.check.outputs.has_sca }}
+    steps:
+      - id: check
+        env:
+          VERACODE_API_ID: ${{ secrets.VERACODE_API_ID }}
+          VERACODE_API_KEY: ${{ secrets.VERACODE_API_KEY }}
+          SRCCLR_API_TOKEN: ${{ secrets.SRCCLR_API_TOKEN }}
+        run: |
+          if [ -n "$VERACODE_API_ID" ] && [ -n "$VERACODE_API_KEY" ]; then
+            echo 'has_sast=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'has_sast=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::Veracode SAST skipped — VERACODE_API_ID / VERACODE_API_KEY not configured.'
+          fi
+          if [ -n "$SRCCLR_API_TOKEN" ]; then
+            echo 'has_sca=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'has_sca=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::Veracode SCA skipped — SRCCLR_API_TOKEN not configured.'
+          fi
+
+  # Produces the artifact both scan jobs consume, so packaging happens once per run.
+  #
+  # Node must be installed BEFORE `veracode package`. Verified against this repo in a
+  # Linux container: without Node the CLI logs "npm project detected but npm not
+  # available" and silently degrades to a generic JavaScript package; with it, the
+  # NpmPackager runs a real build per workspace. It emits four artifacts (root, api,
+  # web, shared); the root one contains all 94 source files across every workspace, so
+  # scanning that single artifact covers the monorepo.
+  package:
+    needs: preflight
+    if: needs.preflight.outputs.has_sast == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # packages/shared builds dual CJS+ESM and the other workspaces import from its
+      # dist, so the packager's per-workspace builds fail without it (see CLAUDE.md).
+      - name: Build shared package
+        run: npm run build -w @itsm/shared
+
+      - name: Install the Veracode CLI
+        run: curl -fsS https://tools.veracode.com/veracode-cli/install | sh
+
+      - name: Package application artifacts
+        run: ./veracode package --source . --output veracode-artifacts --trust
+
+      # The CLI names each artifact after its source directory basename, which on a
+      # runner is the repository name — not something to hardcode in the scan jobs.
+      # Normalise the root artifact to a stable filename, and fail loudly listing what
+      # was actually produced if it is missing, rather than letting a later job die on
+      # a confusing "file not found".
+      - name: Normalise the root artifact filename
+        run: |
+          root_zip="veracode-artifacts/veracode-auto-pack-$(basename "$PWD")-js.zip"
+          if [ ! -f "$root_zip" ]; then
+            echo "::error::Expected root artifact '$root_zip' was not produced."
+            echo 'Artifacts that were produced:'
+            ls -la veracode-artifacts
+            exit 1
+          fi
+          mv "$root_zip" veracode-artifacts/veracode-app.zip
+          ls -la veracode-artifacts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: veracode-artifacts
+          path: veracode-artifacts/
+          retention-days: 5
+
+  # Fast feedback on PRs. Fails only on Very High and High so the gate stays credible —
+  # a scanner that blocks on everything gets ignored within a fortnight. Medium and below
+  # are reported in the job summary without failing the build.
+  sast-pipeline:
+    needs: [preflight, package]
+    if: needs.preflight.outputs.has_sast == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: veracode-artifacts
+          path: veracode-artifacts
+
+      - name: Veracode Pipeline Scan
+        uses: veracode/Veracode-pipeline-scan-action@v1.0.25
+        with:
+          vid: ${{ secrets.VERACODE_API_ID }}
+          vkey: ${{ secrets.VERACODE_API_KEY }}
+          file: veracode-artifacts/veracode-app.zip
+          fail_on_severity: 'Very High, High'
+          fail_build: true
+          issue_details: true
+          summary_display: true
+          project_name: ${{ github.repository }}
+          project_url: ${{ github.server_url }}/${{ github.repository }}
+          project_ref: ${{ github.ref }}
+
+  # The full policy scan is slow (tens of minutes), so it never runs on a PR — only on
+  # main and on the weekly schedule. This is the one that produces the compliance result.
+  sast-policy:
+    needs: [preflight, package]
+    if: >-
+      needs.preflight.outputs.has_sast == 'true' &&
+      (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: veracode-artifacts
+          path: veracode-artifacts
+
+      - name: Veracode Upload and Scan
+        uses: veracode/veracode-uploadandscan-action@0.2.11
+        with:
+          appname: 'Project_ITSM'
+          createprofile: true
+          filepath: veracode-artifacts/veracode-app.zip
+          version: '${{ github.ref_name }}-${{ github.run_number }}-${{ github.sha }}'
+          vid: ${{ secrets.VERACODE_API_ID }}
+          vkey: ${{ secrets.VERACODE_API_KEY }}
+          # The app holds credentials and an audit trail, so it is not a low-criticality
+          # profile even while it is pre-production.
+          criticality: 'High'
+          scantimeout: 60
+
+  # Agent-based SCA: a different advisory database from npm's, plus license data and
+  # reachability analysis. Runs against the repository source, so it needs no artifact.
+  #
+  # NOTE: `npm audit` is NOT currently run anywhere in CI. The dependency pass took the
+  # tree to zero advisories but nothing enforces that it stays there, so until either
+  # this job is configured or an `npm audit` gate is added to ci.yml, a newly introduced
+  # vulnerable dependency will merge unnoticed.
+  sca:
+    needs: preflight
+    if: needs.preflight.outputs.has_sca == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Veracode SCA
+        uses: veracode/veracode-sca@v2.1.20
+        env:
+          SRCCLR_API_TOKEN: ${{ secrets.SRCCLR_API_TOKEN }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Findings are reported in the job log rather than opened as GitHub issues.
+          # Auto-filing issues on a public repo would publish the vulnerability inventory
+          # of a running deployment; revisit once there is a private triage destination.
+          create-issues: false

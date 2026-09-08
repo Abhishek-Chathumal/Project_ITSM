@@ -107,6 +107,12 @@ npm run lint && npm run typecheck && npm run test && npm run build && npm run fo
 CI runs these plus `build` (Docker images), `smoke` (prod stack over HTTP) and
 `smoke-dev` (dev stack, incl. the Vite→API proxy). All must be green.
 
+A separate `security-scan.yml` runs Veracode SAST (pipeline scan on PRs, blocking on High
+and above; full policy scan on `main` and weekly) and SCA — see ADR-0014. Every job is
+gated on its secret being present and skips cleanly when it isn't, so it never blocks an
+unconfigured environment. It triggers on `pull_request`, **never `pull_request_target`** —
+the repo is public, and the latter would expose the credentials to fork PRs.
+
 ## Hard-won gotchas — do not regress these
 
 Each of these was a real production-blocking bug. They're fixed; keep them fixed.

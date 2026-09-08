@@ -218,6 +218,13 @@ locally rather than by any unit test.
   errors are unaffected. See ADR-0012's consequences.
 - `eslint` is still on 8.x (EOL) with `@typescript-eslint` 7.x. Not vulnerable, but a
   flat-config migration is coming whether or not it is planned for.
+- **`npm audit` runs nowhere in CI.** The dependency pass took the tree to zero
+  advisories, but nothing enforces it — a newly introduced vulnerable dependency merges
+  unnoticed. Veracode SCA (ADR-0014) closes this once `SRCCLR_API_TOKEN` is configured;
+  a free `npm audit` job in `ci.yml` would close it unconditionally. **Not yet done.**
+- The Veracode scan and upload steps in `security-scan.yml` are **unvalidated** — they
+  need credentials that only exist as GitHub Actions secrets, so they cannot be exercised
+  from a dev machine. Packaging was verified locally; the scans await their first run.
 
 ### Resolved since Phase 0
 
