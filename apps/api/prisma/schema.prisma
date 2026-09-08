@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  active
+  disabled
+}
+
+model User {
+  id           String       @id @default(uuid())
+  name         String
+  email        String       @unique
+  passwordHash String?      @map("password_hash")
+  roleId       String       @map("role_id")
+  role         Role         @relation(fields: [roleId], references: [id])
+  departmentId String?      @map("department_id")
+  department   Department?  @relation(fields: [departmentId], references: [id])
+  mfaSecret    String?      @map("mfa_secret")
+  status       UserStatus   @default(active)
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+model Role {
+  id           String           @id @default(uuid())
+  name         String           @unique
+  isSystemRole Boolean          @default(false) @map("is_system_role")
+  permissions  RolePermission[]
+  users        User[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  key         String           @unique
+  description String
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String     @map("role_id")
+  permissionId String     @map("permission_id")
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model Department {
+  id           String       @id @default(uuid())
+  name         String
+  parentDeptId String?      @map("parent_department_id")
+  parent       Department?  @relation("DeptHierarchy", fields: [parentDeptId], references: [id])
+  children     Department[] @relation("DeptHierarchy")
+  users        User[]
+
+  @@map("departments")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?  @map("actor_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  diff       Json?
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+  // Append-only by convention: AuditService exposes no update/delete methods and no
+  // controller route ever targets this table for mutation (Article IV).
+}
+
+model OrgSettings {
+  key   String @id
+  value Json
+
+  @@map("org_settings")
+}

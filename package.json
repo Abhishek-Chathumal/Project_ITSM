@@ -1,0 +1,31 @@
+{
+  "name": "project-itsm",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "npm@10.9.7",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "build": "turbo run build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "dev:api": "npm run start:dev -w apps/api",
+    "dev:web": "npm run dev -w apps/web",
+    "prisma:migrate:dev": "npm run prisma:migrate:dev -w apps/api",
+    "prisma:migrate:deploy": "npm run prisma:migrate:deploy -w apps/api",
+    "prisma:seed": "npm run prisma:seed -w apps/api"
+  },
+  "devDependencies": {
+    "turbo": "^2.1.3",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

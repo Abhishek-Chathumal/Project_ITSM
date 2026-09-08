@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w @itsm/shared
+      - run: npm run lint
+      - run: npm run format:check
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w @itsm/shared
+      - run: npx prisma generate --schema apps/api/prisma/schema.prisma
+      - run: npm run typecheck
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: itsm
+          POSTGRES_PASSWORD: change-me
+          POSTGRES_DB: itsm
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U itsm"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://itsm:change-me@localhost:5432/itsm
+      REDIS_URL: redis://localhost:6379
+      NODE_ENV: test
+      SESSION_SECRET: ci-test-secret
+      SEED_BOOTSTRAP_ADMIN: 'true'
+      SEED_ADMIN_EMAIL: admin@example.com
+      SEED_ADMIN_PASSWORD: ChangeMe123!
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w @itsm/shared
+      - name: Apply migrations
+        run: npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
+      - name: Seed database
+        run: npx prisma db seed
+        working-directory: apps/api
+      - name: API tests
+        run: npm run test -w @itsm/api
+      - name: Web tests
+        run: npm run test -w @itsm/web
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w @itsm/shared
+      - run: npx prisma generate --schema apps/api/prisma/schema.prisma
+      - run: npm run build
+      - name: Build API image
+        run: docker build -f infra/docker/api.Dockerfile -t itsm-api:ci .
+      - name: Build web image
+        run: docker build -f infra/docker/web.Dockerfile -t itsm-web:ci .
