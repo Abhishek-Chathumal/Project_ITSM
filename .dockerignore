@@ -1,0 +1,35 @@
+# Keep the build context to what the images actually need. Without this, `COPY . .` in the
+# build stages pulls in the real .env (SESSION_SECRET, DB credentials, seed admin password)
+# and the whole .git history. Neither reaches the final image, but both sit in build-cache
+# layers — and anything built with `--target build` would carry them.
+
+.git
+.gitignore
+.github
+
+node_modules
+**/node_modules
+
+dist
+**/dist
+build
+.turbo
+**/.turbo
+coverage
+**/coverage
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+.env
+.env.*
+!.env.example
+
+*.log
+npm-debug.log*
+
+docs
+.claude
+.vscode
+.idea
+.DS_Store
+Thumbs.db

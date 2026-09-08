@@ -1,0 +1,20 @@
+# Force LF in the working tree on every platform.
+#
+# Without this, Git on Windows (core.autocrlf=true) checks files out with CRLF while
+# Prettier's endOfLine default is "lf" — so `npm run format:check`, part of the documented
+# pre-push gate, fails on all ~111 files locally while passing in CI on Linux. Pinning LF
+# here makes the gate mean the same thing on both.
+#
+# Nothing changes in the repository itself: Git already stores LF. This only governs what
+# lands in the working tree.
+* text=auto eol=lf
+
+# Binary files must never be line-ending converted.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary

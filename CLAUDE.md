@@ -77,7 +77,23 @@ deliberately no update/delete method anywhere. Keep it that way.
 `SessionUserDto` — they diverged once and crashed the frontend.
 
 **Failures must be loud** (Article VII). The global `AllExceptionsFilter` logs with a
-requestId and returns a sanitized body. Don't swallow errors locally.
+requestId and returns a sanitized body. Don't swallow errors locally. It also honours the
+`http-errors` status thrown by Express middleware (CSRF 403, malformed-JSON 400) rather
+than flattening those to 500 — see ADR-0012.
+
+**Compose the UI from the existing primitives** (ADR-0013). `apps/web/src/components/ui`
+has `Badge`/`StatusDot`/`IdChip`, `Avatar`, `Table`, `Tabs`, `DropdownMenu`, `StatTile`,
+`IconButton`, `Skeleton`/`EmptyState`/`ErrorState`, `Button`, `Card`, `Input`, `Switch`.
+Add a page by composing these plus `PageHeader`, not by writing fresh markup.
+
+- **Pass a `tone`, never a colour.** `tone="danger"`, not `text-red-500`. Every colour is
+  a token in `styles/globals.css`; that file is what a restyle edits.
+- **A new nav entry is a row in `components/layout/nav-items.ts`**, not new JSX.
+- **Never invent numbers.** `StatTile` distinguishes loading (`value={undefined}`) from a
+  real zero from "no source yet" (`placeholder`). A plausible-looking fake metric on an
+  ITSM dashboard is worse than an obvious placeholder.
+- Gate queries on `isAllowed(...)` so a user without the permission never fires a request
+  that can only 403 — UX only; the server is still the boundary.
 
 **Config over code** (Article II). Roles, permissions, and (later) workflows/SLAs/fields
 are admin-editable data, not hardcoded switches.
@@ -98,7 +114,7 @@ Each of these was a real production-blocking bug. They're fixed; keep them fixed
 1. **Prisma needs a Debian base image, not Alpine.** On musl, Prisma mis-detects
    OpenSSL, loads an `openssl-1.1.x` engine, and dies with
    `Could not parse schema engine response`. `api.Dockerfile` uses
-   `node:20-bookworm-slim` + explicit `openssl`; `schema.prisma` pins
+   `node:22-bookworm-slim` + explicit `openssl`; `schema.prisma` pins
    `binaryTargets = ["native", "debian-openssl-3.0.x"]`. (ADR-0009)
 
 2. **The Vite dev proxy must target the compose service name.** Inside the `web`
@@ -113,13 +129,33 @@ Each of these was a real production-blocking bug. They're fixed; keep them fixed
 4. **`prisma generate` must run before migrate/seed** in any fresh environment —
    `npm ci` won't do it, because the schema isn't at the conventional root path.
 
-5. **Changing a base image? `docker compose ... down -v` first.** The
-   `api_node_modules`/`web_node_modules` volumes persist native binaries built for the
-   old libc and will not be re-created by a plain `down`.
+5. **Changing a base image or a dependency? `docker compose ... down -v` first.** The
+   `*_node_modules` volumes persist the old dependency tree and native binaries built for
+   the old libc, and a plain `down` will not re-create them.
 
 6. **Building an image proves nothing about running it.** That's why `smoke` and
    `smoke-dev` exist. If you add a runtime dependency or change how a service is
    wired, make sure a smoke job actually exercises it.
+
+7. **Every `node_modules` the dev stack resolves through needs its own named volume.**
+   `docker-compose.dev.yml` bind-mounts the repo at `/repo`, so any `node_modules` not
+   masked by a volume is the _host's_ — on Windows that means `.cmd`/`.ps1` shims, and the
+   container dies with `exec: line 33: node.exe: not found`. Masking the root alone is not
+   enough: npm nests a package under `apps/*/node_modules` whenever it can't hoist it, and
+   which packages those are shifts with any dependency bump. This surfaced when vite 8
+   stopped hoisting to the root and the dev web container stopped booting. All of
+   `/repo/node_modules`, `/repo/apps/{api,web}/node_modules` and
+   `/repo/packages/shared/node_modules` are masked — keep it that way.
+
+8. **`prisma` is a runtime `dependency`, not a devDependency.** The container's `CMD` runs
+   `npx prisma migrate deploy`, and the runtime image is a production-only install
+   (ADR-0011). Demote it and `npx` will try to fetch Prisma from the network at boot.
+
+9. **Vite HMR does not fire through the Windows bind mount.** Docker Desktop on Windows
+   doesn't propagate inotify events into the container, so edits on the host do not
+   trigger a rebuild — and a browser reload still serves Vite's cached module graph.
+   `docker compose ... restart web` picks the changes up. Don't conclude a change "didn't
+   work" from a stale dev server.
 
 ## Working style that fits this project
 
