@@ -80,12 +80,31 @@ Veracode's PR-time feedback proves too slow.
   less than it appeared to. The Node prerequisite and the loud artifact check exist for
   that reason, and the packaging log is worth reading when the scan reports suspiciously
   little.
-- The Veracode jobs cannot be verified from a development machine, since scanning needs
-  credentials that deliberately live only in GitHub Actions secrets. Packaging _was_
-  verified locally; the scan and upload steps are unvalidated until their first real run.
-- **`npm audit` still runs nowhere in CI.** The dependency pass took the tree to zero
-  advisories, but nothing enforces that. Until SCA is configured or an `npm audit` gate
-  is added, a newly introduced vulnerable dependency merges unnoticed. This is a known
-  gap, recorded in PROJECT_STATE §4.
+- **`npm audit` still runs nowhere in CI, and SCA does not cover for it.** The SCA agent
+  installs with `--omit=dev`: measured on this repo it scans 184 production libraries out
+  of 941 in the full tree. The vite/vitest/esbuild advisories fixed in the dependency pass
+  were all dev-only and would not have been caught. Recorded in PROJECT_STATE §4.
+- The **policy scan remains unvalidated** until this lands on `main`, since it is the one
+  job that never runs on a PR. Expect to iterate on it once.
+
+### What the first runs actually taught
+
+Worth keeping, because both failures were silent and both looked like success:
+
+- **The pipeline scan reported green having scanned nothing.** `fail_on_severity` is
+  appended to the CLI unquoted (only `include` is special-cased), so `Very High, High`
+  word-split and aborted the command; and `fail_build` only matches
+  `/FAILURE: Found \d+ issues!` in the scan output, which an aborted scan never emits.
+  Fixed by quoting the value, adding `fail_build_error`, and — because neither of those
+  is trustworthy alone — an explicit step asserting `results.json` parses and carries a
+  scan result.
+- **SCA reported clean having read only the root `package.json`**: `Direct Libraries 0`,
+  62 lines of code, against a workspace of four packages. `recursive: true` is required
+  for npm workspaces.
+
+The generalisation: **a security tool's default failure mode is a confident pass over
+nothing.** Never accept a green scan that has not been shown to fail on purpose, and read
+the coverage numbers, not just the verdict.
+
 - Adding a commercial dependency to CI means scans stop if the licence lapses. The jobs
   skip rather than fail in that case, so the loss would be quiet — worth noticing.

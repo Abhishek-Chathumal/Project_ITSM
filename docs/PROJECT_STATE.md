@@ -218,13 +218,15 @@ locally rather than by any unit test.
   errors are unaffected. See ADR-0012's consequences.
 - `eslint` is still on 8.x (EOL) with `@typescript-eslint` 7.x. Not vulnerable, but a
   flat-config migration is coming whether or not it is planned for.
-- **`npm audit` runs nowhere in CI.** The dependency pass took the tree to zero
-  advisories, but nothing enforces it — a newly introduced vulnerable dependency merges
-  unnoticed. Veracode SCA (ADR-0014) closes this once `SRCCLR_API_TOKEN` is configured;
-  a free `npm audit` job in `ci.yml` would close it unconditionally. **Not yet done.**
-- The Veracode scan and upload steps in `security-scan.yml` are **unvalidated** — they
-  need credentials that only exist as GitHub Actions secrets, so they cannot be exercised
-  from a dev machine. Packaging was verified locally; the scans await their first run.
+- **`npm audit` runs nowhere in CI, and Veracode SCA does not substitute for it.** The
+  SCA agent installs with `--omit=dev`, so it scans the ~184-library production tree and
+  never sees the ~750 dev-only packages. Measured on this repo: 184 scanned vs 941 in the
+  full tree. The vite/vitest/esbuild advisories fixed in the dependency pass sat entirely
+  in that dev-only region and **would not have been caught**. A free `npm audit` job in
+  `ci.yml` is what closes this. **Not yet done.**
+- The Veracode **policy scan** (`sast-policy`) is still unvalidated — it only runs on
+  `main` and the weekly schedule, so its first real execution happens after this branch
+  merges. The pipeline scan and SCA are verified working (see below).
 
 ### Resolved since Phase 0
 
