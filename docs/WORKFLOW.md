@@ -43,9 +43,12 @@ copy .env.example .env
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
-Open `C:\Development\Project_ITSM` in Antigravity (File → Open Folder). Optionally run
-`npm ci` in its terminal so the editor gets TypeScript IntelliSense — the app itself still
-runs in Docker.
+**An editor is optional but recommended.** Claude Code is a standalone CLI — a bare
+terminal in this folder is fully sufficient. An editor earns its place for reading code,
+reviewing diffs before you commit, and making small tweaks yourself without spending a
+Claude turn. Antigravity, VS Code, or anything else works; nothing here depends on a
+particular one. Open the folder (File → Open Folder) and optionally run `npm ci` in its
+terminal so you get TypeScript IntelliSense — the app itself still runs in Docker.
 
 **Each machine gets its own database.** The Docker volume holding Postgres data is local.
 Tickets you create on your office laptop will not appear at home. That's expected — it's
@@ -66,10 +69,10 @@ git pull
 **Working:**
 
 ```powershell
-claude          # in Antigravity's integrated terminal
+claude          # any terminal in the repo folder — your editor's integrated one is handy
 ```
 
-Then describe what you want. Claude edits files; Antigravity shows the changes live; the
+Then describe what you want. Claude edits files; your editor shows the changes live; the
 running Docker stack hot-reloads so you can test immediately.
 
 **Leaving a machine — always end here:**
@@ -87,10 +90,10 @@ you exactly what to do on the other side. It also flags anything that _won't_ tr
 
 ---
 
-## 4. Git in Antigravity
+## 4. Git from an editor
 
-Antigravity is VS Code-based, so its Source Control panel (`Ctrl+Shift+G`) works the
-familiar way:
+In any VS Code-based editor (Antigravity included) the Source Control panel
+(`Ctrl+Shift+G`) works the familiar way:
 
 - **Changes list** — every modified file; click one to see a side-by-side diff.
 - **Stage** (`+`) → **message** → **Commit** → **Sync/Push**.
@@ -115,8 +118,8 @@ Token as the password when git prompts.
 
 ## 5. Adding files (images, docs, PDFs, etc.)
 
-Just put the file in the folder — via Windows Explorer, or by dragging it into Antigravity's
-file tree. Git picks it up like any other change.
+Just put the file in the folder — via Windows Explorer, or by dragging it into your
+editor's file tree. Git picks it up like any other change.
 
 Where things belong:
 
