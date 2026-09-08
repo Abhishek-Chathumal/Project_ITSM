@@ -135,3 +135,57 @@ jobs:
       - name: Tear down
         if: always()
         run: docker compose down -v
+
+  # The dev stack is a different animal from prod: Vite dev server instead of nginx,
+  # bind-mounted source, hot reload. It's what a contributor actually runs day to day,
+  # so it gets its own smoke test — notably covering the dev server's /api proxy, which
+  # prod's nginx config does not exercise.
+  smoke-dev:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare env file
+        run: |
+          cp .env.example .env
+          sed -i 's|^SESSION_SECRET=.*|SESSION_SECRET=ci-smoke-secret-not-for-real-use|' .env
+      - name: Start the dev stack
+        run: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+      - name: Wait for the API to serve traffic
+        run: |
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:3000/health > /dev/null 2>&1; then
+              echo "API is healthy"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::API never became healthy in the dev stack"
+          exit 1
+      - name: Wait for the Vite dev server
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:5173 > /dev/null 2>&1; then
+              echo "Vite dev server is serving"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Vite dev server never came up"
+          exit 1
+      # The check that matters: hitting the API *through* the dev server's proxy.
+      # A wrong proxy target (e.g. localhost inside the web container) fails here
+      # while every other check in this workflow still passes.
+      - name: Verify the dev server proxies /api to the API container
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5173/api/v1/auth/csrf)
+          echo "proxied /api/v1/auth/csrf -> $code"
+          if [ "$code" != "200" ]; then
+            echo "::error::Vite proxy did not reach the API (got $code)"
+            exit 1
+          fi
+      - name: Dump container logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.dev.yml logs --no-color
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v
