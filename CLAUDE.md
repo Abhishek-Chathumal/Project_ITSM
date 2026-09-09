@@ -166,7 +166,7 @@ Each of these was a real production-blocking bug. They're fixed; keep them fixed
 1. **Prisma needs a Debian base image, not Alpine.** On musl, Prisma mis-detects
    OpenSSL, loads an `openssl-1.1.x` engine, and dies with
    `Could not parse schema engine response`. `api.Dockerfile` uses
-   `node:22-bookworm-slim` + explicit `openssl`; `schema.prisma` pins
+   `node:24-bookworm-slim` + explicit `openssl`; `schema.prisma` pins
    `binaryTargets = ["native", "debian-openssl-3.0.x"]`. (ADR-0009)
 
 2. **The Vite dev proxy must target the compose service name.** Inside the `web`

@@ -146,7 +146,7 @@ Login page plus a protected app shell, rebuilt in a ServiceOps-inspired language
 - `docker-compose.yml` (prod-like: nginx-served static frontend, compiled API) and
   `docker-compose.dev.yml` (Vite + `nest start --watch`, bind-mounted source).
 - CI jobs: `lint`, `audit`, `typecheck`, `test`, `build`, `smoke`, `smoke-dev`
-  (+ GitGuardian), on `actions/checkout@v7` / `setup-node@v7` and Node 22. `audit` runs
+  (+ GitGuardian), on `actions/checkout@v7` / `setup-node@v7` and Node 24. `audit` runs
   `npm audit` over the **full** dependency tree, gating on high and above and publishing
   the complete report as an `npm-audit` artifact — Veracode SCA sees only the production
   subset, so the two are complements.
@@ -333,6 +333,45 @@ wrong property name in a seed file could only ever be found by CI's seed step fa
 runtime. `apps/api/tsconfig.seed.json` adds a no-emit pass over `prisma/**/*.ts`, and the
 api's `typecheck` script runs it.
 
+### Node 22 → 24 (2026-09-09)
+
+Prompted by the Node 20 deprecation warning on `sast-policy`, which turned out to be about
+something else entirely — the runtime GitHub executes a JavaScript _action_ in, not the Node
+this app builds or runs on. Those are unrelated knobs, and bumping ours does nothing for
+that warning (§4 has the detail). But the question was worth asking on its own terms, and
+the answer was yes.
+
+Everything moves together: `engines` (`>=24.0.0`), all seven `setup-node` steps across both
+workflows, `node:24-bookworm-slim` for the API image and `node:24-alpine` for the web build,
+and `@types/node` to `^24.13.3` so the types match the runtime. `packageManager` went to
+`npm@11.19.0` — what `node:24-bookworm-slim` actually ships, and no longer the stale
+`10.9.7` that contradicted gotcha 9's "regenerate the lockfile with npm 11+".
+
+**The risk was native modules, and it was checked rather than hoped.** `argon2` declares
+`napi_versions: [8]`, so its prebuilt binaries are N-API and ABI-stable across Node majors —
+no rebuild needed, and nothing in the production-only runtime image (ADR-0011) has to compile
+at boot. Prisma 5.22 predates Node 24 by six months, which was the other open question.
+
+**Verified by running the real stack, not by building it** (gotcha 6). Both images built,
+then the prod compose stack came up on isolated ports under a separate project name, beside
+the maintainer's own running stack rather than disturbing it:
+
+- API reports `v24.20.0` in-container and serves `/health`;
+- both migrations applied on boot — so Prisma 5.22 is fine on Node 24;
+- seed ran; CSRF issued; **login returned 200**, which is the check that matters, because
+  password verification is `argon2`'s native binary executing under Node 24 on glibc;
+- `/auth/login` and `/auth/me` payloads are **byte-identical** — the Phase 0 crash that is
+  easiest to reintroduce;
+- `/users` answers 200 with a session and 401 without; nginx serves the frontend; an
+  `auth.login` audit row was written.
+
+API image size is essentially unchanged at 540 MB (537 MB on Node 22).
+
+One thing worth knowing for any future isolated run: **Compose merges `ports` across
+override files rather than replacing them.** A plain override still publishes the base
+file's `5432:5432` and collides with a stack already running. `ports: !override` is what
+actually replaces the list.
+
 ### Bugs found and fixed (all caught by running it for real, not by tests)
 
 1. **`/auth/me` and `/auth/login` returned different shapes** — `me` returned the internal
@@ -472,7 +511,7 @@ locally rather than by any unit test.
 - ~~**Dependency vulnerabilities** (~31 advisories, 1 critical, 9 high)~~ — **now 0**, via
   Node 20→22, NestJS 10→11, vite 5→8, vitest 2→5, react-router-dom 6→7, and
   `@testing-library/*` bumps. `npm audit` and `npm audit --omit=dev` are both clean.
-- ~~Deprecated `actions/checkout@v4`/`setup-node@v4` on Node 20~~ — now `@v7` on Node 22.
+- ~~Deprecated `actions/checkout@v4`/`setup-node@v4` on Node 20~~ — now `@v7` on Node 24.
 - ~~No `.dockerignore`~~ — added; keeps `.env` and `.git` out of the build context.
 - ~~Build tooling shipped in the runtime image~~ — a `prod-deps` stage cut the API image
   from 1.01 GB to 537 MB. See ADR-0011.
@@ -532,7 +571,7 @@ constitution assumed admin-only user creation:
 - **Windows**, PowerShell 7. Repo at `C:\Development\Project_ITSM`.
 - **Docker Desktop** with WSL2 backend (needed a reboot post-install before the
   `docker-desktop` WSL distro was provisioned — that was the fix for "unable to start").
-- Node 22 LTS + Git installed via `winget`. **PATH changes need a fresh terminal.**
+- Node 24 LTS + Git installed via `winget`. **PATH changes need a fresh terminal.**
 - Editor: **Antigravity IDE** (VS Code-based). Not an officially supported Claude Code
   integration. Working model: this chat drives development and pushes to GitHub; the
   maintainer pulls in Antigravity to read, run, and test. The `claude` CLI can be run in
