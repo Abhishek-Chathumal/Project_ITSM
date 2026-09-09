@@ -4,7 +4,7 @@
 # fails at runtime with "Could not parse schema engine response" (the engine is
 # actually printing a shared-library load error, which isn't JSON). Debian bookworm
 # ships OpenSSL 3.x and matches Prisma's debian-openssl-3.0.x target cleanly.
-FROM node:22-bookworm-slim AS base
+FROM node:24-bookworm-slim AS base
 WORKDIR /repo
 # The -slim images omit OpenSSL, which the Prisma engines link against at runtime.
 RUN apt-get update \
