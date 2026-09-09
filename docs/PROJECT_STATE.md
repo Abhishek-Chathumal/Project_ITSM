@@ -3,8 +3,9 @@
 Living record of where this project stands, how it got here, and what comes next.
 **Update this at the end of any significant work session.**
 
-Last updated: 2026-09-09 · Phase 0 complete; dependency/security pass and UI shell done;
-Phase 1 ticketing not started.
+Last updated: 2026-09-09 · Phase 0 complete; dependency/security pass, UI shell, and
+security scanning (SAST/SCA, ADR-0014) done, plus the production `SESSION_SECRET`
+requirement (ADR-0015); Phase 1 ticketing not started.
 
 ---
 
@@ -17,6 +18,11 @@ project. A resume prompt can be as short as:
 > Continuing Project_ITSM. Read `docs/PROJECT_STATE.md` for current state, then let's
 > start Phase 1 with <whatever you want>.
 
+**First, orient on anything in flight**, which no document can state without going stale:
+`git status && git log --oneline -5` for where the tree is, and `gh pr list` for open PRs
+(a session may be resuming with work already up for review). Then read §4 — known debt is
+where the unfinished business lives, and each item says whether it blocks anything.
+
 Key documents, in the order a newcomer should read them:
 
 | File                                              | What it is                                                   |
@@ -24,8 +30,10 @@ Key documents, in the order a newcomer should read them:
 | `CLAUDE.md`                                       | Auto-loaded brief: stack, conventions, gotchas               |
 | `docs/PROJECT_STATE.md`                           | This file — history, current state, roadmap                  |
 | `docs/Support_Portal_Development_Constitution.md` | **The governing spec.** Source of truth for scope and design |
+| `docs/PHASE_PLAN.md`                              | **The execution plan.** What each phase delivers, per slice  |
 | `docs/adr/*.md`                                   | Why each architectural decision was made                     |
 | `README.md`                                       | Setup/run instructions                                       |
+| `docs/WORKFLOW.md`                                | Day-to-day: machines, git, uploads, end-of-session ritual    |
 
 ---
 
@@ -274,6 +282,10 @@ locally rather than by any unit test.
   Design, citing ADR-0015). Needs Veracode access and a human with the approver role, so it
   cannot be done from CI or by an agent. Until then, treat a red `sast-policy` as expected
   and read `sast-findings` instead. **Not yet done.**
+- **Two GitGuardian incidents may still read "Triggered"** in the dashboard (37100835, 37100836) from test fixtures committed and then removed while fixing ADR-0015. Both were
+  invented values, never real credentials, so nothing needs rotating — but they should be
+  resolved as test fixtures so the dashboard keeps meaning something. The PR check itself is
+  green ("no secrets present in this pull request anymore"). Dashboard-only housekeeping.
 
 ### Resolved since Phase 0
 

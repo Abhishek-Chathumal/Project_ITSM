@@ -36,7 +36,11 @@ These are not optional and apply without being restated:
 5. **An ADR for every architectural decision or deviation** (constitution Part XIV).
 6. **Verify by running it**, not just by tests passing. The bugs that hurt in Phase 0 were
    all runtime-only.
-7. **Slices ship green.** Lint, typecheck, tests, build, both smoke jobs.
+7. **Slices ship green.** Lint, typecheck, tests, build, `format:check`, both smoke jobs —
+   plus the security workflow: `sast-pipeline`, `sca` and GitGuardian. **`sast-policy` is
+   the one exception: it is expected to fail, on `main` and nowhere else** (it skips on PRs),
+   for a Medium dismissed in ADR-0015. Never read that red as a regression, and never
+   "fix" it by weakening a gate — see CLAUDE.md.
 
 ---
 
@@ -44,6 +48,12 @@ These are not optional and apply without being restated:
 
 Repo scaffold, CI/CD, Docker Compose, migrations, local auth, RBAC skeleton, audit log.
 Merged in PRs #1–#5. Details in [`PROJECT_STATE.md`](PROJECT_STATE.md) §2.
+
+Merged since, all of it groundwork rather than Phase 1 feature work: this plan itself (#6),
+the dependency pass and the UI shell and primitive layer (#7, ADR-0013), security scanning
+(#8, ADR-0014), publishing the full SAST findings (#9), the production `SESSION_SECRET`
+requirement (#10, ADR-0015), and the documentation of all of it (#11). PROJECT_STATE §3 is
+the narrative.
 
 ---
 
@@ -55,16 +65,26 @@ Merged in PRs #1–#5. Details in [`PROJECT_STATE.md`](PROJECT_STATE.md) §2.
 **Goal:** a person can raise a ticket, a technician can work it to resolution, and both can
 see it. This is the phase that makes the product real.
 
-### Slice 1 — Dependency & security triage
+### Slice 1 — Dependency & security triage ✅ MOSTLY DONE
 
-_Do this first, before adding surface area._
+**Do not start here — most of this is finished.** The ~31 advisories (1 critical, 9 high)
+that this slice was written against are **now 0**, via Node 20→22, NestJS 10→11, vite 5→8,
+vitest 2→5 and react-router-dom 6→7. `npm audit` and `npm audit --omit=dev` are both clean.
+Automated scanning went in alongside it: Veracode SAST + SCA and GitGuardian, per ADR-0014.
+See PROJECT_STATE §3 ("The dependency & security pass", "Making the scanners tell the
+truth") for what was done and what it cost.
 
-`npm audit` reports ~31 advisories (1 critical, 9 high) in the Phase 0 tree. Triage: patch
-what's safely patchable, document anything deferred with a reason. Add a CI audit step if
-it can be made non-flaky.
+**What is still open from this slice** — small, and safe to do at any point rather than
+blocking Slice 2:
 
-**Done when:** critical/high advisories are resolved or explicitly accepted in
-`PROJECT_STATE.md` §4 with justification.
+- **No `npm audit` job in CI.** Veracode SCA does not substitute: it installs `--omit=dev`
+  and so scans 184 of 941 libraries. The dev-only advisories fixed above would not have been
+  caught. PROJECT_STATE §4 has the measurement.
+- **`sast-policy` is red on `main` by a documented disposition** (one dismissed Medium,
+  ADR-0015). Clearing it needs a mitigation approved in the Veracode platform by a human.
+
+**Done when:** the CI audit step exists, or is explicitly declined in `PROJECT_STATE.md` §4
+with a reason.
 
 ### Slice 2 — Ticket data model
 
@@ -257,4 +277,8 @@ practical limits of route-level guards.
 - [ ] Shared DTOs in `packages/shared`, one shape per concept
 - [ ] ADR written if an architectural decision was made
 - [ ] `lint`, `typecheck`, `test`, `build`, `format:check`, `smoke`, `smoke-dev` all green
+- [ ] `sast-pipeline`, `sca` and GitGuardian green (`sast-policy` skips on PRs; it is
+      knowingly red on `main` — standing rule 7)
+- [ ] No high-entropy literal added, fixtures included — GitGuardian reads one as a leaked
+      credential, and it scans every commit in the PR, so a follow-up commit will not clear it
 - [ ] `PROJECT_STATE.md` updated (`/update-state`)
