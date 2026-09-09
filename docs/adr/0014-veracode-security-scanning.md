@@ -84,10 +84,18 @@ Veracode's PR-time feedback proves too slow.
   installs with `--omit=dev`: measured on this repo it scans 184 production libraries out
   of 941 in the full tree. The vite/vitest/esbuild advisories fixed in the dependency pass
   were all dev-only and would not have been caught. Recorded in PROJECT_STATE §4.
-- The **policy scan remains unvalidated** until this lands on `main`, since it is the one
-  job that never runs on a PR. Expect to iterate on it once.
+- The **policy scan is now validated, and it returns `Did Not Pass`** — see the measured
+  result below. Its verdict carries no signal until the one Medium is mitigated in the
+  Veracode platform, so `sast-findings` is the artifact to read, not the job's conclusion.
 - Adding a commercial dependency to CI means scans stop if the licence lapses. The jobs
   skip rather than fail in that case, so the loss would be quiet — worth noticing.
+- **Every run publishes the full `results.json` as a `sast-findings` artifact, 30-day
+  retention.** The action only uploads `filtered_results.json`, which holds the findings
+  above the fail threshold — normally an empty array — leaving everything below the gate in
+  a job log that ages out. Part XIII requires a sub-gate finding to be reviewed and a
+  dismissal to carry a written rationale, and neither is possible against a file nobody
+  kept. This changes no gate; it is visibility only, and it is what made the CWE-259 Medium
+  in ADR-0015 attributable to a line number.
 
 ### What the first runs actually taught
 
@@ -103,6 +111,14 @@ Worth keeping, because both failures were silent and both looked like success:
 - **SCA reported clean having read only the root `package.json`**: `Direct Libraries 0`,
   62 lines of code, against a workspace of four packages. `recursive: true` is required
   for npm workspaces.
+- **The policy scan works, and disagrees with the PR gate by design.** Its first three runs
+  on `main` all ended `Did Not Pass`, with the scan itself healthy (`Results Ready`, no
+  error). The cause is the deliberate narrow gate this ADR chose: `sast-pipeline` blocks on
+  High and above, while Veracode's _policy_ counts Mediums too, so one CWE-259 Medium keeps
+  `main` red while every PR is green. That divergence is a consequence of the gate decision
+  above, not a misconfiguration — but it does mean a red `sast-policy` must never be read as
+  "something just broke". Dismissed under Part XIII in ADR-0015; PROJECT_STATE §4 records
+  the platform mitigation that would clear it.
 
 The generalisation: **a security tool's default failure mode is a confident pass over
 nothing.** Never accept a green scan that has not been shown to fail on purpose, and read

@@ -28,6 +28,9 @@ A self-hosted, ITIL4-aligned ITSM platform (incident, request, problem, change, 
 cp .env.example .env
 # edit .env: set SESSION_SECRET, and if you want a first admin user,
 # set SEED_BOOTSTRAP_ADMIN=true with SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD
+#
+# The shipped placeholder is fine for local development. A production stack
+# refuses to start on it — generate a real one with `openssl rand -base64 48`.
 
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
