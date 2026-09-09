@@ -74,6 +74,8 @@ gap table, PROJECT_STATE §4b the detail):
   move.
 - **Slice 0c — `applyScope(query, user, permission)`.** One helper, the only place that knows
   what `department` means. Unit-tested per scope kind, including the null-department case.
+  **Depends on Phase 1 Slice 2b**, because Ref I3 defines `own` as requester, assignee,
+  **watcher or collaborator** — and the last two are not in the schema yet.
 - **Slice 0d — the twelve seeded default roles**, permission-locked (membership editable,
   permission set not), plus the privilege safety rules from 5.3a / Ref I8 as acceptance
   criteria rather than follow-ups.
@@ -136,6 +138,37 @@ PROJECT_STATE §3 has the detail.
 
 **Not in this slice, by design:** transition rules (Slice 4), attachments (Slice 5), and the
 new permission keys (Slice 3 — they belong with the routes they guard).
+
+> ⚠️ **Reopened in part by the Functional Reference (B2, B3) — see Slice 2b.** ADR-0016 was
+> written against the constitution's 7.2 table, before B2/B3 existed. The seeded priority
+> matrix is the wrong shape and several core fields are absent. Nothing is broken (no API
+> reads it yet), but do not treat this slice as settled.
+
+### Slice 2b — Reconcile the request model with B2 and B3
+
+Small, and it must land **before** Slice 0c's `applyScope()`, for the reason in the last bullet.
+
+- **Priority matrix → 3×4.** Add the fourth urgency level (Ref B3: Low, Medium, High, Urgent)
+  and the three resulting matrix cells. Seed change, no migration.
+- **`resolvePriority()`** — fires **only when `priority_id IS NULL` at creation**; an explicitly
+  set priority is never overridden. Test that a manually-set priority survives a later impact
+  change (B3 names this as the case implementations get wrong).
+- **Phase-1 fields from B2:** `source` and `tags`; `location`; `diagnosis` / `solution` /
+  `closure_code` alongside the existing `resolutionNotes`; merge parent/child columns;
+  response and resolution escalation **level counters** — counters, not booleans, because
+  "escalated twice, now with the team lead" has to be expressible.
+- **Watchers and collaborators** as distinct participant sets.
+- **Type conversion** (Incident ↔ Service Request) designed as a first-class operation per B1 —
+  each type has its own workflow, so conversion must map the current status onto the target
+  workflow rather than just swapping `typeId`.
+
+**Why this blocks `applyScope()`:** Ref I3 defines `own` scope as requester, assignee,
+**watcher, or collaborator**. Those last two do not exist in the schema yet, so a scope helper
+written today would silently implement a narrower `own` than the spec — passing its tests and
+still being wrong.
+
+**Done when:** the matrix is 3×4, a manually-set priority survives an impact change under test,
+and `own` can be expressed over all four participant kinds.
 
 ### Slice 3 — Request API + scoped authorization
 
