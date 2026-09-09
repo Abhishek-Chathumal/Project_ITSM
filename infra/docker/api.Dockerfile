@@ -48,4 +48,10 @@ COPY --from=build /repo/apps/api/prisma ./apps/api/prisma
 
 WORKDIR /repo/apps/api
 EXPOSE 3000
+# `migrate deploy`, never `db seed`. This image carries `prisma/` but deliberately not
+# `src/`, and the seed imports the shared tree helper from `../src/common/tree` (one
+# materialized-path implementation, per Functional Reference B4). So adding `db seed` here
+# fails at *boot*, not build — the failure mode ADR-0011 and the smoke jobs exist to catch.
+# Seeding runs where the full tree is present: CI's `test` job, and the dev stack, which
+# bind-mounts the repo.
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]

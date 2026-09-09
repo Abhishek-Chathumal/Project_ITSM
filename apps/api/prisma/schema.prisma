@@ -25,14 +25,28 @@ model User {
   role         Role        @relation(fields: [roleId], references: [id])
   departmentId String?     @map("department_id")
   department   Department? @relation(fields: [departmentId], references: [id])
+  /// Where the person works. Ref B4 makes location a security filter and not only a label —
+  /// `location` scope restricts a technician to their own site's requests — so this is the
+  /// user half of that predicate. Nullable, and a null must never widen a scoped query.
+  locationId   String?     @map("location_id")
+  location     Location?   @relation(fields: [locationId], references: [id])
   mfaSecret    String?     @map("mfa_secret")
   status       UserStatus  @default(active)
   createdAt    DateTime    @default(now()) @map("created_at")
 
-  ticketsRequested Ticket[]  @relation("TicketRequester")
-  ticketsAssigned  Ticket[]  @relation("TicketAssignee")
-  comments         Comment[]
+  /// Technician group membership is many-to-many (Ref B1: "a technician may belong to
+  /// several"). This is what `group` scope resolves through, and the reason it cannot be
+  /// answered from `departmentId`.
+  groupMemberships TechnicianGroupMember[]
 
+  ticketsRequested    Ticket[]             @relation("TicketRequester")
+  ticketsAssigned     Ticket[]             @relation("TicketAssignee")
+  ticketsWatched      TicketWatcher[]
+  ticketsCollaborated TicketCollaborator[]
+  comments            Comment[]
+
+  @@index([departmentId])
+  @@index([locationId])
   @@map("users")
 }
 
@@ -65,16 +79,100 @@ model RolePermission {
   @@map("role_permissions")
 }
 
+/// Where a person works, up to five levels deep (Ref B4).
+///
+/// Distinct from TechnicianGroup, which is who works a ticket. ADR-0016 modelled these as
+/// one thing; ADR-0018 separates them, because Ref I3.1 makes `department` and `group` two
+/// different scope values and a single column cannot answer both.
 model Department {
   id           String       @id @default(uuid())
   name         String
   parentDeptId String?      @map("parent_department_id")
   parent       Department?  @relation("DeptHierarchy", fields: [parentDeptId], references: [id])
   children     Department[] @relation("DeptHierarchy")
-  users        User[]
-  tickets      Ticket[]
 
+  /// Materialized ancestry, `/<root>/…/<self>/`, maintained by the shared tree helper.
+  /// Ref I3.2 asks for this explicitly: `department` scope may include sub-departments, and
+  /// a prefix match on an indexed path is what keeps that a single indexed read instead of
+  /// a recursive query on every request.
+  ///
+  /// The index below uses `text_pattern_ops` deliberately. A subtree test is
+  /// `path LIKE '/a/b/%'`, and PostgreSQL will not use a default btree on a text column for
+  /// a prefix LIKE unless the database collation is C — so the plain index this started as
+  /// was one a scoped list query would have quietly sequential-scanned past.
+  path  String @default("")
+  depth Int    @default(0)
+
+  users   User[]
+  tickets Ticket[]
+
+  @@index([parentDeptId])
+  @@index([path(ops: raw("text_pattern_ops"))])
   @@map("departments")
+}
+
+/// Geographic classification, N-level (Ref B4).
+///
+/// B4 is explicit that this "doubles as a security filter": `location` scope (Ref I3.1)
+/// restricts a technician to their own site's requests, optionally including child sites.
+/// That is why it is a tree with a materialized path rather than a string column on a ticket.
+model Location {
+  id       String     @id @default(uuid())
+  name     String
+  parentId String?    @map("parent_location_id")
+  parent   Location?  @relation("LocationTree", fields: [parentId], references: [id])
+  children Location[] @relation("LocationTree")
+
+  /// Same contract as Department.path — see there.
+  path     String  @default("")
+  depth    Int     @default(0)
+  isActive Boolean @default(true) @map("is_active")
+  position Int     @default(0)
+
+  users   User[]
+  tickets Ticket[]
+
+  @@index([parentId])
+  @@index([path(ops: raw("text_pattern_ops"))])
+  @@map("locations")
+}
+
+/// A team a ticket is assigned to (Ref B1, G3.3).
+///
+/// Not a Department. A technician may belong to several groups while working in one
+/// department, and Ref G3.3 gives each group its own business hours — which is what makes
+/// SLA calculation team-aware in Phase 2 (Ref D3). The `businessHoursId` that implies is
+/// deliberately absent until the table it points at exists (the rule ADR-0016 set for
+/// placeholder columns).
+model TechnicianGroup {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  name        String
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  isSystem    Boolean  @default(false) @map("is_system")
+  position    Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  members TechnicianGroupMember[]
+  tickets Ticket[]
+
+  @@map("technician_groups")
+}
+
+/// Membership join. Many-to-many by design (Ref B1) — the single FK it replaces could not
+/// express a technician who covers both Network and Desktop.
+model TechnicianGroupMember {
+  groupId   String          @map("group_id")
+  group     TechnicianGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId    String          @map("user_id")
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  @@id([groupId, userId])
+  @@index([userId])
+  @@map("technician_group_members")
 }
 
 model AuditLog {
@@ -212,10 +310,54 @@ model Category {
   isActive Boolean    @default(true) @map("is_active")
   position Int        @default(0)
 
+  /// Category is the third tree in the system and uses the same materialized path as
+  /// Department and Location, per Ref B4's instruction to implement one shared tree helper
+  /// rather than three bespoke ones. Nothing scopes on it today; "all tickets under
+  /// Hardware" in reporting (Ref K2) is the same prefix match when it lands.
+  path  String @default("")
+  depth Int    @default(0)
+
   tickets Ticket[]
 
   @@index([parentId])
+  @@index([path(ops: raw("text_pattern_ops"))])
   @@map("categories")
+}
+
+/// The channel a request arrived through (Ref B1, B2).
+///
+/// A column on the ticket, never a separate intake path — B1 is explicit about that, and it
+/// is the difference between one queue and seven divergent ones. `Source is changed` is an
+/// automation trigger (Ref E5), so it has to be a stored, comparable value.
+model TicketSource {
+  id       String  @id @default(uuid())
+  key      String  @unique
+  name     String
+  isActive Boolean @default(true) @map("is_active")
+  isSystem Boolean @default(false) @map("is_system")
+  position Int     @default(0)
+
+  tickets Ticket[]
+
+  @@map("ticket_sources")
+}
+
+/// How a request ended (Ref B2 "Resolution").
+///
+/// Deliberately not the same thing as reaching a terminal Status: the status says the
+/// workflow finished, the closure code says what happened. "Fixed", "withdrawn" and "no
+/// fault found" are all Closed, and reporting needs to tell them apart.
+model ClosureCode {
+  id       String  @id @default(uuid())
+  key      String  @unique
+  name     String
+  isActive Boolean @default(true) @map("is_active")
+  isSystem Boolean @default(false) @map("is_system")
+  position Int     @default(0)
+
+  tickets Ticket[]
+
+  @@map("closure_codes")
 }
 
 /// Never chosen directly — derived from Impact x Urgency through PriorityMatrix,
@@ -307,20 +449,87 @@ model Ticket {
   priorityId String   @map("priority_id")
   priority   Priority @relation(fields: [priorityId], references: [id])
 
-  requesterId String      @map("requester_id")
-  requester   User        @relation("TicketRequester", fields: [requesterId], references: [id])
-  assigneeId  String?     @map("assignee_id")
-  assignee    User?       @relation("TicketAssignee", fields: [assigneeId], references: [id])
-  /// The queue that owns it. Departments double as teams (Part VII).
-  teamId      String?     @map("team_id")
-  team        Department? @relation(fields: [teamId], references: [id])
+  /// The channel it arrived through (Ref B2 "Identity"). Nullable only so a row
+  /// created before sources were seeded stays valid; the API requires one.
+  sourceId String?       @map("source_id")
+  source   TicketSource? @relation(fields: [sourceId], references: [id])
+
+  /// Freeform labels (Ref B2 "Identity", and an "Add Tags" bulk action in Ref B6).
+  /// A string array rather than a join table: tags are user data an agent types, not
+  /// configuration an admin curates, so there is nothing to rename or reorder.
+  tags String[] @default([])
+
+  // --- Ownership (Ref B2). Four distinct axes, and the reason ADR-0018 exists:
+  // `own`, `group`, `department` and `location` are four different scope values in
+  // Ref I3.1, so they need four different columns. Collapsing any pair makes the
+  // corresponding scope silently resolve to the wrong row set.
+  requesterId String  @map("requester_id")
+  requester   User    @relation("TicketRequester", fields: [requesterId], references: [id])
+  assigneeId  String? @map("assignee_id")
+  assignee    User?   @relation("TicketAssignee", fields: [assigneeId], references: [id])
+
+  /// The team that works it (Ref B1 "Technician Group"). Replaces the former `teamId`,
+  /// which pointed at Department — see ADR-0018.
+  groupId String?          @map("group_id")
+  group   TechnicianGroup? @relation(fields: [groupId], references: [id])
+
+  /// The department the request belongs to. Classification, not assignment.
+  departmentId String?     @map("department_id")
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  /// The site it concerns. Ref B4: doubles as a security filter.
+  locationId String?   @map("location_id")
+  location   Location? @relation(fields: [locationId], references: [id])
+
+  /// Subscribed to the activity without owning it (Ref B1). Counts as `own` scope
+  /// (Ref I3.1) — which is the whole reason this table exists before applyScope() does.
+  watchers TicketWatcher[]
+
+  /// Tracked participants beyond requester and assignee (Ref B1). Also `own` scope.
+  collaborators TicketCollaborator[]
 
   /// §2.1 — escalation to a Major Incident. The broadcast and post-incident
   /// review it triggers are Phase 3/4; the flag is recorded from Phase 1 so the
   /// history is there when they land.
   isMajorIncident Boolean @default(false) @map("is_major_incident")
-  /// Required to reach a Resolved status; the rule is enforced in Slice 4.
+
+  // --- Resolution (Ref B2). Three fields, not one free-text box: diagnosis is what was
+  // wrong, solution is what was done about it, resolution notes are what the requester is
+  // told. Ref C5/F3 mine the first two to suggest knowledge articles, which is impossible
+  // once they are concatenated into prose.
+  /// What was found to be wrong.
+  diagnosis String?
+  /// What was done about it.
+  solution String?
+  /// What the requester is told. Required to reach a Resolved status; enforced in Slice 4.
   resolutionNotes String? @map("resolution_notes")
+  /// How it ended, as distinct from the status it ended in.
+  closureCodeId String?      @map("closure_code_id")
+  closureCode   ClosureCode? @relation(fields: [closureCodeId], references: [id])
+
+  // --- Escalation (Ref B2). Counters, not booleans. B2 is emphatic: a `breached` flag
+  // cannot express "escalated twice, now with the team lead", and both levels are
+  // automation trigger events (Ref E5).
+  responseEscalationLevel   Int @default(0) @map("response_escalation_level")
+  resolutionEscalationLevel Int @default(0) @map("resolution_escalation_level")
+
+  // --- Merge (Ref B2 "Linkage", Ref F1). Manual merge is Phase 1 per Part XII.
+  /// Set on the *secondary* ticket, pointing at the primary it was folded into.
+  /// Ref F1.4 is explicit that merging is never automatic — detection suggests, a human
+  /// decides — so nothing writes this without an action.
+  mergeParentId String?  @map("merge_parent_id")
+  mergeParent   Ticket?  @relation("TicketMerge", fields: [mergeParentId], references: [id])
+  mergedTickets Ticket[] @relation("TicketMerge")
+
+  // --- States beyond Closed (Ref B5). Not statuses: a workflow's terminal state says the
+  // work finished, and these say the ticket should never have counted. Kept as flags so
+  // they compose with any admin-defined workflow. `isOperationallyActive()` in
+  // requests/request-state.ts is the single predicate that reads them — B5 asks for one
+  // place, because SLA compliance and workload figures go quietly wrong otherwise.
+  /// Noise. Excluded from SLA timers, CSAT and operational metrics.
+  isSpam Boolean @default(false) @map("is_spam")
+  /// Retired from active lists, retained for reporting. Excluded from active workload.
+  archivedAt DateTime? @map("archived_at")
 
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
@@ -330,15 +539,55 @@ model Ticket {
   comments Comment[]
 
   // Indexes follow the queues in §9.4: mine, my team's, unassigned — and every
-  // list is ordered newest-first.
+  // list is ordered newest-first. The ownership indexes are also the four scope
+  // predicates applyScope() will emit, which is why each has one.
   @@index([requesterId, createdAt])
   @@index([assigneeId, createdAt])
-  @@index([teamId, statusId])
+  @@index([groupId, statusId])
+  @@index([departmentId, statusId])
+  @@index([locationId, statusId])
   @@index([statusId])
   @@index([typeId])
   @@index([categoryId])
+  @@index([sourceId])
+  @@index([mergeParentId])
   @@index([createdAt])
+  @@index([tags], type: Gin)
   @@map("tickets")
+}
+
+/// A user subscribed to a ticket's activity without owning it (Ref B1).
+///
+/// Its own table rather than an array column because Ref I3.1 counts a watcher as `own`
+/// scope: applyScope() has to turn "tickets I watch" into a join predicate, and an array of
+/// UUIDs on the ticket would make that a scan.
+model TicketWatcher {
+  ticketId  String   @map("ticket_id")
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([ticketId, userId])
+  @@index([userId])
+  @@map("ticket_watchers")
+}
+
+/// A tracked participant beyond requester and assignee (Ref B1).
+///
+/// Distinct from a watcher: a watcher is subscribed, a collaborator is involved. Both count
+/// as `own` scope, and both are separately manageable, so they are two tables rather than
+/// one with a discriminator.
+model TicketCollaborator {
+  ticketId  String   @map("ticket_id")
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([ticketId, userId])
+  @@index([userId])
+  @@map("ticket_collaborators")
 }
 
 /// Threaded replies (§2.1). `isInternal` is a visibility boundary, not a UI hint:

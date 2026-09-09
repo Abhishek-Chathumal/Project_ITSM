@@ -1,25 +1,32 @@
 # ADR-0016: The ticket data model — configurable rows, with the few enums code must branch on
 
-**Status:** Accepted, but **incomplete against the Functional Reference** — see the note below.
+**Status:** Accepted, and **partly superseded by [ADR-0018](0018-request-model-reconciled-with-b2-b3.md)** — see the note below.
 
 > **Read this before treating the model as settled.** This ADR was written against the
 > constitution's 7.2 table, which was the only source at the time. The Functional Reference
 > that arrived afterwards specifies the same entity in far more detail (**B2** field groups,
-> **B3** priority-matrix behaviour), and two things here are now known to be wrong rather than
-> merely thin:
+> **B3** priority-matrix behaviour, **I3** scope resolution), and **ADR-0018 has since
+> corrected three things here.**
 >
-> - **The seeded priority matrix is the wrong shape.** B3 defines Urgency with **four** levels
->   (Low, Medium, High, Urgent) against three Impact levels — a 3×4 grid of 12 cells. The seed
->   creates 3×3 = 9.
-> - **Derivation must be conditional.** B3: the matrix "fires only when Priority is left blank
->   at creation. An explicitly set priority is never overridden." This ADR's decision to derive
->   and store is compatible with that, but the rule itself is unimplemented — and B3 singles it
->   out as the case implementations get wrong, requiring a test that a manually-set priority
->   survives a later impact change. `request.priority.override` exists for exactly this.
+> - **The seeded priority matrix was the wrong shape.** B3 defines Urgency with **four**
+>   levels (Low, Medium, High, Urgent) against three Impact levels — a 3×4 grid of 12 cells.
+>   This ADR's seed created 3×3 = 9. ✅ Fixed in ADR-0018, by widening: all nine original
+>   cells kept their priority and the fourth urgency column was added.
+> - **Derivation had to be made conditional.** B3: the matrix "fires only when Priority is
+>   left blank at creation. An explicitly set priority is never overridden." This ADR's
+>   decision to derive and store is compatible with that, but the rule itself was
+>   unimplemented. ✅ Implemented in ADR-0018 as `PriorityResolverService`, which exposes no
+>   update path at all — that absence is what enforces the rule.
+> - **⚠️ "Departments double as teams" is wrong, and is the one correction that changed the
+>   schema's shape.** Reference B1 makes a Technician Group a distinct entity a technician may
+>   belong to _several_ of, B2 lists Technician Group and Department as separate fields, and
+>   **I3.1 makes `group` and `department` two different scope values.** One column cannot
+>   answer both. ADR-0018 replaces `Ticket.teamId → Department` with `groupId`,
+>   `departmentId` and `locationId`, and adds `TechnicianGroup` with many-to-many membership.
 >
-> Neither is a live defect: no API reads the matrix yet. Both are corrected in Phase 1's slice
-> plan. PROJECT_STATE §4b carries the full list, including the B2 fields this schema does not
-> yet have.
+> None of the three was a live defect when found — no API read any of it. **Everything else in
+> this ADR stands:** one ticket table for both types, priority derived then stored, workflows
+> per ticket type, and `StatusCategory` as the enum code branches on while names stay data.
 > **Relates to:** Constitution Article II (Configuration Over Code), Part II §2.1/§2.2, Part III §3.3, Part VII (Data Model), Part IX §9.4 · Supersedes nothing · Builds on [ADR-0013](0013-in-house-ui-component-layer.md)
 
 ## Context

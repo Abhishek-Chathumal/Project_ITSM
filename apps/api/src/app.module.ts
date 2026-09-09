@@ -17,6 +17,7 @@ import { PermissionsModule } from './permissions/permissions.module';
 import { DepartmentsModule } from './departments/departments.module';
 import { AuditModule } from './audit/audit.module';
 import { OrgSettingsModule } from './org-settings/org-settings.module';
+import { RequestsModule } from './requests/requests.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { OrgSettingsModule } from './org-settings/org-settings.module';
     DepartmentsModule,
     AuditModule,
     OrgSettingsModule,
+    RequestsModule,
   ],
   controllers: [AppController],
   providers: [
