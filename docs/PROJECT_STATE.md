@@ -5,7 +5,8 @@ Living record of where this project stands, how it got here, and what comes next
 
 Last updated: 2026-09-09 · Phase 0 complete; dependency/security pass, UI shell, and
 security scanning (SAST/SCA, ADR-0014) done, plus the production `SESSION_SECRET`
-requirement (ADR-0015); Phase 1 ticketing not started.
+requirement (ADR-0015) and the CI `npm audit` job that closes Phase 1 Slice 1;
+Phase 1 ticketing (Slice 2 onward) not started.
 
 ---
 
@@ -114,8 +115,11 @@ Login page plus a protected app shell, rebuilt in a ServiceOps-inspired language
 
 - `docker-compose.yml` (prod-like: nginx-served static frontend, compiled API) and
   `docker-compose.dev.yml` (Vite + `nest start --watch`, bind-mounted source).
-- CI jobs: `lint`, `typecheck`, `test`, `build`, `smoke`, `smoke-dev` (+ GitGuardian),
-  on `actions/checkout@v7` / `setup-node@v7` and Node 22.
+- CI jobs: `lint`, `audit`, `typecheck`, `test`, `build`, `smoke`, `smoke-dev`
+  (+ GitGuardian), on `actions/checkout@v7` / `setup-node@v7` and Node 22. `audit` runs
+  `npm audit` over the **full** dependency tree, gating on high and above and publishing
+  the complete report as an `npm-audit` artifact — Veracode SCA sees only the production
+  subset, so the two are complements.
 - `security-scan.yml` (ADR-0014): `preflight`, `package`, `sast-pipeline` (PR gate, High
   and above), `sast-policy` (`main` + weekly), `sca`. Every run publishes the full findings
   as a `sast-findings` artifact for 30 days, sub-gate ones included. **`sast-policy` is
@@ -226,6 +230,37 @@ Two things worth remembering from it:
   GitGuardian scans every commit in a PR, the branch had to be squashed to remove the
   literal from its history; a follow-up commit does not clear it.
 
+### The CI audit job, and the six highs it found (2026-09-09)
+
+The last open item from Phase 1's Slice 1. `ci.yml` gained an `audit` job (details in §4's
+resolved list), and it earned its place immediately: the full tree had **six high-severity
+advisories** that nothing in CI was looking at.
+
+All six trace to one root — **`multer <= 2.2.0`** (four DoS advisories plus a file-size-limit
+bypass), reached through `@nestjs/platform-express`. The other five entries npm reports
+(`@nestjs/core`, `@nestjs/platform-express`, `@nestjs/swagger`, `@nestjs/testing`,
+`nestjs-pino`) are transitive echoes of that one package, not separate problems. Five of the
+six are in the production tree, so this was live surface, not a dev-only nuisance.
+
+Two things about the fix are worth keeping:
+
+- **Upstream cannot be waited for.** `@nestjs/platform-express` pins `multer` to exactly
+  `2.2.0` — in 11.2.3 and still in the current 12.0.1 — so no Nest upgrade clears it. The
+  fix is a root `overrides` entry (`"multer": "^2.3.0"`), the same lever already used to
+  pin `rxjs`. `npm audit` is clean on the full tree afterwards.
+- **`npm` will not apply a new `overrides` entry while `node_modules` exists.** Adding the
+  entry and re-running `npm install` — with `--force`, with `--package-lock-only`, even
+  after deleting `package-lock.json` — reported "up to date" and left `multer` at 2.2.0,
+  because npm resolved against the hidden lockfile in `node_modules`. Only a resolve with
+  no `node_modules` present picked it up. If an override looks ignored, that is why.
+  (The regenerated lockfile also hoists `vite`/`vitest` from `apps/web/node_modules` to the
+  root, reversing what gotcha 7 described. Both layouts are masked by named volumes in the
+  dev stack, and `smoke-dev` is the check that it still boots.)
+
+The npm that generates the lockfile matters too: **npm 10 drops the `libc` fields** that
+optional-dependency selection uses on musl vs glibc, so it silently downgrades a lockfile
+written by npm 11+. Regenerate with the newer npm, not with the version in `packageManager`.
+
 ### Bugs found and fixed (all caught by running it for real, not by tests)
 
 1. **`/auth/me` and `/auth/login` returned different shapes** — `me` returned the internal
@@ -269,12 +304,6 @@ locally rather than by any unit test.
   errors are unaffected. See ADR-0012's consequences.
 - `eslint` is still on 8.x (EOL) with `@typescript-eslint` 7.x. Not vulnerable, but a
   flat-config migration is coming whether or not it is planned for.
-- **`npm audit` runs nowhere in CI, and Veracode SCA does not substitute for it.** The
-  SCA agent installs with `--omit=dev`, so it scans the ~184-library production tree and
-  never sees the ~750 dev-only packages. Measured on this repo: 184 scanned vs 941 in the
-  full tree. The vite/vitest/esbuild advisories fixed in the dependency pass sat entirely
-  in that dev-only region and **would not have been caught**. A free `npm audit` job in
-  `ci.yml` is what closes this. **Not yet done.**
 - **`sast-policy` fails on `main`, by a disposition rather than by neglect — and so its
   verdict is currently worthless as a signal.** It is now validated: it runs, completes
   (`Results Ready`), and returns `Did Not Pass` on one Medium — CWE-259 against the
@@ -321,6 +350,15 @@ locally rather than by any unit test.
   green ("no secrets present in this pull request anymore"). Dashboard-only housekeeping.
 
 ### Resolved since Phase 0
+
+- ~~**`npm audit` runs nowhere in CI, and Veracode SCA does not substitute for it**~~ —
+  `ci.yml` now has an `audit` job. It gates on **high and above** (matching
+  `sast-pipeline`'s threshold) and publishes the complete `npm audit --json` as an
+  `npm-audit` artifact for 30 days, so moderates and lows stay reviewable instead of
+  aging out with the job log. It runs no `npm ci` — npm resolves advisories from
+  `package-lock.json` alone — so it costs a runner-minute, not a full install.
+  **It found six highs on its first run**, which is the argument for it in one line: see
+  the multer entry below.
 
 - ~~**Dependency vulnerabilities** (~31 advisories, 1 critical, 9 high)~~ — **now 0**, via
   Node 20→22, NestJS 10→11, vite 5→8, vitest 2→5, react-router-dom 6→7, and
