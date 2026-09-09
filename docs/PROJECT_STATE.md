@@ -3,9 +3,17 @@
 Living record of where this project stands, how it got here, and what comes next.
 **Update this at the end of any significant work session.**
 
-Last updated: 2026-09-09 · Phase 0 complete. Phase 1 **Slice 1 done** (the CI `npm audit`
-job, and the six high advisories it found) and **Slice 2 done** (the ticket data model,
-ADR-0016). Slice 3, the ticket API and its RBAC scoping, is next.
+Last updated: 2026-09-09 · **The spec was revised and Phase 0 is re-opened.** A rewritten
+constitution plus a new companion — the Functional Reference — brought six amendments;
+**A-001 replaces the two-layer permission model with a three-layer one and moves
+access-control foundations into Phase 0** (ADR-0017). Nothing built is wrong; it is now
+measured against a larger requirement.
+
+Merged and sound: Phase 1 **Slices 1 and 2** (the CI `npm audit` job and the six high
+advisories it found; the ticket data model, ADR-0016), plus **Node 22 → 24**,
+**Prisma 5.22 → 6.19.3**, and the Veracode profile-stranding bug fixed in the workflow rather
+than in a human's memory. **Slice 3's groundwork is superseded before it was ever used** —
+see §4b.
 
 ---
 
@@ -25,22 +33,30 @@ where the unfinished business lives, and each item says whether it blocks anythi
 
 Key documents, in the order a newcomer should read them:
 
-| File                                              | What it is                                                   |
-| ------------------------------------------------- | ------------------------------------------------------------ |
-| `CLAUDE.md`                                       | Auto-loaded brief: stack, conventions, gotchas               |
-| `docs/PROJECT_STATE.md`                           | This file — history, current state, roadmap                  |
-| `docs/Support_Portal_Development_Constitution.md` | **The governing spec.** Source of truth for scope and design |
-| `docs/PHASE_PLAN.md`                              | **The execution plan.** What each phase delivers, per slice  |
-| `docs/adr/*.md`                                   | Why each architectural decision was made                     |
-| `README.md`                                       | Setup/run instructions                                       |
-| `docs/WORKFLOW.md`                                | Day-to-day: machines, git, uploads, end-of-session ritual    |
+| File                                              | What it is                                                                                                                      |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `CLAUDE.md`                                       | Auto-loaded brief: stack, conventions, gotchas                                                                                  |
+| `docs/PROJECT_STATE.md`                           | This file — history, current state, roadmap                                                                                     |
+| `docs/Support_Portal_Development_Constitution.md` | **The governing spec.** What to build and why                                                                                   |
+| `docs/Support_Portal_Functional_Reference.md`     | **Its companion.** How it behaves — fields, rules, algorithms, the permission catalogue. Its **Part Q amends the constitution** |
+| `docs/PHASE_PLAN.md`                              | **The execution plan.** What each phase delivers, per slice                                                                     |
+| `docs/adr/*.md`                                   | Why each architectural decision was made                                                                                        |
+| `README.md`                                       | Setup/run instructions                                                                                                          |
+| `docs/WORKFLOW.md`                                | Day-to-day: machines, git, uploads, end-of-session ritual                                                                       |
 
 ---
 
 ## 2. Current state — what actually exists
 
-**Phase 0 (Foundation) is complete, merged to `main`, and verified running** on the
-maintainer's machine via Docker Compose. Login works end to end in the browser.
+**Everything below is merged to `main` and verified running** on the maintainer's machine via
+Docker Compose. Login works end to end in the browser.
+
+> ⚠️ **"Phase 0 complete" is withdrawn.** Amendment A-001 rephased Part XII and moved the
+> access-control foundations — permission catalogue seeded from a manifest, `PermissionSet` /
+> `UserRole` / scoped `RolePermission` tables, the `applyScope()` helper, and
+> `User.manager_id` + `reporting_path` with cycle protection — **into Phase 0**, because
+> retrofitting scope enforcement means auditing every query in the system. ADR-0017 carries
+> the gap table. What exists is sound and none of it is wasted; the bar moved.
 
 ### Backend (`apps/api`, NestJS)
 
@@ -408,6 +424,43 @@ Prisma 6 also prints the signpost for the next step on every CLI run: _"The conf
 property `package.json#prisma` is deprecated and will be removed in Prisma 7."_ §4 records
 what 7 actually involves, and why it is a genuine architecture change rather than a bump.
 
+### The spec was revised, and Phase 0 re-opened (2026-09-09)
+
+Two documents arrived: a rewritten constitution and a new companion, the **Functional
+Reference**. The companion is not commentary — its **Part Q formally amends the constitution**,
+and the constitution's own preamble names it as the one exception to "the constitution governs
+where the two differ."
+
+Six amendments. Five are minor: automation observability ships _with_ the automation engine
+rather than after it (A-002); one parameterized configuration framework instantiated per module
+instead of per-module customization (A-003); ITIL v5 forward-compatibility, meaning every
+automated decision stores a reason and permits override (A-004); deterministic, CPU-cheap
+intelligence is now explicitly _in_ scope while model-based is not (A-005); and a deferral
+register kept distinct from outright exclusions (A-006).
+
+**A-001 is MAJOR, and it invalidated work merged the same day.** It replaces the two-layer
+role→permission model with three layers — roles, per-user grants/revocations where revocation
+always wins, and a **scope attached per permission rather than per role**. Two consequences
+land directly on this codebase:
+
+- **Phase 0 is no longer complete.** Part XII was rephased to pull the access-control
+  foundations forward, on the stated grounds that retrofitting scope enforcement means auditing
+  every query in the system. `applyScope()`, `UserRole`, scoped `RolePermission`, the manifest
+  seeding and the reporting hierarchy are all Phase 0 now.
+- **Slice 3's groundwork was superseded before it was used.** The keys pushed that morning —
+  `ticket.view.own` as a floor widened by `.team` and `.all` — collapse to a single
+  `request.view` carrying a scope. §4b has the mapping.
+
+The line worth memorising, because it dictates the shape of every query we are about to write:
+
+> Scope is enforced in the **data layer, once**, via a single `applyScope(query, user,
+permission)` helper. Enforcing scope per endpoint guarantees an endpoint eventually gets
+> missed — and the miss is a data leak, not a visible bug.
+
+Adopted in **ADR-0017**, which amends ADR-0006 rather than revoking it: the guard mechanism
+stands, the model it serves does not. Nothing already built is wrong — auth, sessions, CSRF,
+the audit trail, the ticket data model and the guard all survive intact.
+
 ### Bugs found and fixed (all caught by running it for real, not by tests)
 
 1. **`/auth/me` and `/auth/login` returned different shapes** — `me` returned the internal
@@ -581,6 +634,51 @@ locally rather than by any unit test.
 
 ---
 
+## 4b. In flight — read before starting anything
+
+**Branch `claude/ticket-api-rbac` is superseded. Rebuild it; do not rebase it.**
+
+It carries two commits of groundwork for Phase 1 Slice 3 — ticketing permission keys and
+ticket DTOs — written against the permission model that Amendment A-001 replaced hours later.
+It compiles and its gate is green; it is simply the wrong shape now:
+
+| On that branch                                                                                 | Under A-001                                                                                  |
+| ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `ticket.view.own` / `.team` / `.all` as three keys, with `view.own` a "floor" the others widen | **one** permission, `request.view`, carrying a **scope** of `own`/`group`/`department`/`all` |
+| `ticket.edit.all`, added because `edit.team` is department-scoped                              | `request.edit` at `all` scope                                                                |
+| `ticket.` prefix                                                                               | `request.` prefix (Functional Reference I2.1)                                                |
+| Scope filters intended per-query in the service                                                | a single `applyScope(query, user, permission)` helper — enforced in the data layer, once     |
+
+The floor design was a reasonable answer to a real constraint (`@RequirePermission` takes one
+key, so a union of view rights needed a baseline plus wideners). A-001 dissolves the constraint
+rather than solving it: scope is a column, not a key. Nothing there is worth salvaging beyond
+the DTOs, which are unaffected.
+
+### What Phase 0 now needs before Slice 3 can start properly
+
+ADR-0017 has the full gap table. In dependency order:
+
+1. **The permission manifest** — a versioned file in the repo that seeds the ~150-entry
+   catalogue (Ref I2), replacing the ten hand-maintained keys in `seed.ts`. New permissions
+   must seed **disabled-by-default for existing custom roles**, so an upgrade never silently
+   widens access (constitution 7.3.5).
+2. **Schema:** `Permission.module`/`is_sensitive`; `PermissionSet` + `PermissionSetItem` +
+   `RolePermissionSet`; `RolePermission.scope`/`scope_depth`/`custom_scope_id`; **`UserRole`**
+   — a user may now hold several roles, so today's single `User.roleId` FK goes; and
+   `User.manager_id` + `reporting_path` with a **cycle check on every assignment** and subtree
+   recomputation on move.
+3. **`applyScope()`** — one helper, the only place that knows what `department` means.
+4. **The privilege safety rules (5.3a / Ref I8)** as acceptance criteria, not follow-ups.
+
+### The other open decision
+
+**Prisma 7 versus starting the Phase 0 access-control work.** §4 records what 7 involves. It
+is still cheaper before the query surface grows, and `applyScope()` is exactly the kind of
+query-layer work that would have to be rewritten against driver adapters afterwards — which
+strengthens the case for doing Prisma 7 first. Not decided.
+
+---
+
 ## 5. Roadmap
 
 > **Detailed, execution-ready breakdown: [`PHASE_PLAN.md`](PHASE_PLAN.md).**
@@ -588,14 +686,22 @@ locally rather than by any unit test.
 
 ### Constitution phases (Part XII)
 
-| Phase | Scope                                                                                                                          |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------ |
-| 0 ✅  | Foundation — repo, CI, Docker, migrations, local auth, RBAC skeleton                                                           |
-| 1     | **Incident + Service Request ticketing**, unified workflow, categorization, attachments, My Tickets, basic email notifications |
-| 2     | Asset/CMDB, SLA/OLA + business calendars, Knowledge Base, Service Catalog w/ dynamic forms, CSAT                               |
-| 3     | Automation/business rules engine, custom fields, report/dashboard builder, approvals, SSO/MFA                                  |
-| 4     | Problem Management, Change Enablement + calendar, inbound/outbound webhooks, email-to-ticket                                   |
-| 5     | PWA polish + push, optional Tauri desktop, optional native mobile, OpenSearch swap                                             |
+Rephased by Amendment A-001: access control moved earlier because it is load-bearing for
+every later module.
+
+| Phase | Scope                                                                                                                                                                                                                                                                               |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0 ⚠️  | Foundation — repo, CI, Docker, migrations, local auth, append-only audit ✅ · **plus, newly required:** permission catalogue seeded from a manifest, `PermissionSet`/`UserRole`/scoped `RolePermission`, `applyScope()`, `User.manager_id` + `reporting_path` with cycle protection |
+| 1     | **Incident + Service Request ticketing**, type conversion, status workflow, categorization, attachments, My Tickets, email notifications, seeded default roles, **scope enforcement live on every query**, priority matrix, manual ticket merge                                     |
+| 2     | Asset/CMDB linking, SLA/OLA + business calendars (with Ref D3's two worked-example tests), Knowledge Base + suggestion-on-create, Service Catalog w/ dynamic forms, CSAT, jobs/downloads tray                                                                                       |
+| 3     | Automation engine **with observability from day one** (A-002), custom fields, form rules, report/dashboard builder, approvals, SSO/MFA, **user-level overrides, hierarchy scope, custom scopes, access-review report, permission explain tool**                                     |
+| 4     | Problem + KEDB, Change Enablement + calendar, duplicate/similarity detection (Ref F1), resolution memory, webhooks, email-to-ticket with loop protection                                                                                                                            |
+| 5     | PWA polish + push, optional Tauri packaging, anomaly signals, pre-aggregated reporting tables, advanced compliance reporting, deferral-register review                                                                                                                              |
+
+**Deferred throughout** (A-006 — a register reviewed at every phase boundary, deliberately
+distinct from Part N's outright exclusions): delegation, approval-gated permission grants, UC
+agreements, semantic search, LLM-assisted drafting, custom scripts unless properly sandboxed,
+native mobile, zero-downtime deployment.
 
 ### Maintainer-added scope (beyond the original constitution)
 

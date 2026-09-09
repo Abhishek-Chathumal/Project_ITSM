@@ -4,8 +4,20 @@ Self-hosted, ITIL4-aligned ITSM platform for a small organization. Solo maintain
 Browser-based, desktop + mobile friendly. Destined for cloud hosting once mature;
 **security is a standing top priority at every phase.**
 
-The governing spec is [`docs/Support_Portal_Development_Constitution.md`](docs/Support_Portal_Development_Constitution.md).
-It is the source of truth — read the relevant Part before designing a feature.
+**Two documents govern, and you need both.**
+[`docs/Support_Portal_Development_Constitution.md`](docs/Support_Portal_Development_Constitution.md)
+says _what_ to build and why; its companion
+[`docs/Support_Portal_Functional_Reference.md`](docs/Support_Portal_Functional_Reference.md)
+says _how it behaves_ at field, rule, setting and algorithm level — the detail that cannot be
+correctly invented (the priority matrix's exact behaviour, the SLA calculation, the automation
+trigger catalogue, the ~150-entry permission catalogue). Read the relevant Part of both before
+designing a feature.
+
+**Precedence:** the constitution governs where they differ — _except_ where the Functional
+Reference's **Part Q** formally amends it. Six amendments (A-001…A-006) are in force and are
+listed in the constitution's preamble. New conflicts are logged as an ADR, never silently
+resolved (Part XIV).
+
 Detailed project history, current state, and roadmap: [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md).
 Day-to-day workflow (machines, git, file uploads): [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
 What each phase delivers, sliced for execution: [`docs/PHASE_PLAN.md`](docs/PHASE_PLAN.md).
@@ -13,7 +25,11 @@ What each phase delivers, sliced for execution: [`docs/PHASE_PLAN.md`](docs/PHAS
 Slash commands: **`/update-state`** refreshes the project docs; **`/handoff`** does that
 plus verify, commit, and push — the end-of-session ritual before switching machines.
 
-**Status: Phase 0 (Foundation) complete and running.** Phase 1 (ticketing) not started.
+**Status: Phase 0 re-opened by Amendment A-001, which moved access-control foundations into
+it.** What Phase 0 built runs and is sound (auth, sessions, CSRF, RBAC skeleton, audit trail);
+it is now measured against a larger requirement — see ADR-0017 for the exact gap. Phase 1's
+ticket _data model_ (Slice 2) is merged; the ticket API (Slice 3) is not started, and the
+groundwork branch for it is superseded.
 
 ## Stack
 
@@ -53,20 +69,46 @@ Seeded dev login comes from `.env`: `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`
 
 ## Conventions that must be followed
 
-**Authorization — never reinvent it.** Every protected route uses the existing
-mechanism; new capabilities are new _data_, not new guard logic:
+**Authorization is two halves, and both are mandatory.** Amendment A-001 (ADR-0017) replaced
+the two-layer role→permission model with three layers, so "does the caller hold this key?" is
+now only the first half of an authorization decision.
+
+_Half one — the key._ Unchanged, and still never reinvented:
 
 ```ts
-@RequirePermission(PERMISSIONS.TICKET_EDIT_ASSIGNED)   // key from @itsm/shared
+@RequirePermission(PERMISSIONS.REQUEST_EDIT)   // key from @itsm/shared
 ```
 
 - `SessionAuthGuard` + `PermissionGuard` are global (`APP_GUARD`), fail-closed.
   Opt a route out of auth with `@Public()`.
 - Permission keys live in `packages/shared/src/permissions.ts` and are seeded as
-  `Permission` rows. Adding a capability = add key + seed row + decorate the route.
+  `Permission` rows. The catalogue is Functional Reference **I2**, named
+  `module.action[.qualifier]` (`request.view`, `request.note.internal`), and is seeded from a
+  **versioned manifest**, not hand-maintained (constitution 7.3.5).
 - Frontend permission checks (`useAuth().isAllowed(key)`) are **UX only**. The server
   re-checks every request. Never treat a hidden button as a security control.
-- New roles start with **zero** permissions (constitution Article III).
+
+_Half two — the scope._ Every permission carries a scope (`own` · `group` · `department` ·
+`location` · `hierarchy` · `custom` · `all`), attached **per permission, not per role**. The
+constitution is explicit about where it is enforced, and this is the line to remember:
+
+> Scope is enforced in the **data layer, once**, via a single
+> `applyScope(query, user, permission)` helper. Enforcing scope per endpoint guarantees an
+> endpoint eventually gets missed — and the miss is a data leak, not a visible bug.
+
+So: **never hand-write a scope filter in a service or controller.** There is one helper; it
+is the only place that knows what `department` means.
+
+- **Do not model scope as separate keys.** `request.view` at `own`/`group`/`all` scope — not
+  `request.view.own` / `.team` / `.all`. That was the pre-A-001 shape and is superseded.
+- **Revocation always wins** over any grant, and grants never come from a role a user does not
+  hold. User-level overrides and `hierarchy` scope are Phase 3; the resolution order is in
+  constitution 7.3.3.
+- The **privilege safety rules (5.3a / Ref I8) are non-negotiable** on anything touching
+  permissions: no self-escalation, no privilege amplification, last-administrator protection,
+  justification on every override, forced logout on permission change, step-up MFA.
+- New roles start with **zero** permissions (Article III); predefined roles are
+  **permission-locked** — membership editable, permission set not.
 
 **Audit everything that changes state** (Article IV). Call `AuditService.record(...)`
 from the service performing the mutation. `AuditLog` is append-only — there is
