@@ -686,6 +686,57 @@ ADR-0017 has the full gap table. In dependency order:
 3. **`applyScope()`** — one helper, the only place that knows what `department` means.
 4. **The privilege safety rules (5.3a / Ref I8)** as acceptance criteria, not follow-ups.
 
+### Slice 2's data model is also partially superseded — by B2 and B3, not by A-001
+
+Separate from the permission story, and easy to miss because it is not an amendment: the
+Functional Reference specifies the request object in more detail than the constitution's 7.2
+table that ADR-0016 was written against. Nothing merged is broken — no API reads any of this
+yet — but three things are known-wrong rather than merely thin.
+
+**1. The seeded priority matrix is the wrong shape (Ref B3).**
+
+|         | Merged (Slice 2 seed) | Ref B3                                          |
+| ------- | --------------------- | ----------------------------------------------- |
+| Impact  | 3 levels              | 3 — `On User` → `On Department` → `On Business` |
+| Urgency | 3 levels              | **4** — Low, Medium, High, Urgent               |
+| Cells   | 9                     | **12**                                          |
+
+Labels are admin-editable data so the naming difference is immaterial; **the missing fourth
+urgency level is not.** Fixing it is a seed change plus three new matrix rows, no migration.
+
+**2. Priority derivation must be conditional, and this is the part that gets built wrong.**
+B3: the matrix _"fires only when Priority is left blank at creation. An explicitly set priority
+is never overridden."_ Implement as `resolvePriority()` called on create when `priority_id IS
+NULL` — not on every write. B3 explicitly calls for a test that **a manually-set priority
+survives a subsequent impact change**, and `request.priority.override` (Ref I2.1) is the
+permission that gates setting it by hand.
+
+**3. `Ticket` is missing fields B2 groups as core.** Several belong to later phases (SLA
+timers → Phase 2; linked problem/change, tasks, approvals → Phase 3/4), but these are Phase 1:
+
+- **Identity:** `source` (the channel it arrived through — B1 is explicit that this is metadata
+  on the ticket, _never a separate data path_, and `Source is changed` is an automation
+  trigger) and `tags`.
+- **Ownership:** `location`, plus **watchers** and **collaborators** as distinct participant
+  sets — neither is the assignee, and both affect `own` scope (Ref I3 counts watcher and
+  collaborator as "own").
+- **Resolution:** `diagnosis`, `solution` and `closure_code` as separate fields; today there is
+  one `resolutionNotes`.
+- **Merge:** parent/child columns — Part XII puts manual merge in Phase 1.
+- **Escalation:** response and resolution escalation **level counters**. B2 is emphatic that a
+  `breached` boolean cannot express "escalated twice, now with the team lead".
+
+**4. Type conversion is a first-class Phase 1 operation** (B1, and Part XII's Phase 1 row).
+Incident ↔ Service Request is not just a `typeId` update: each type points at its own workflow,
+so conversion has to map the current status onto the target workflow. Worth designing before
+the API, not after.
+
+> The `own` scope definition matters more than it looks: Ref I3 counts a user as "own" if they
+> are **requester, assignee, watcher, or collaborator**. Since watchers and collaborators do not
+> exist in the schema yet, an `applyScope()` written today would silently implement a narrower
+> `own` than the spec defines. Build the columns first, or the scope helper is wrong from day
+> one.
+
 ### The other open decision
 
 **Prisma 7 versus starting the Phase 0 access-control work.** §4 records what 7 involves. It
