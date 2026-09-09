@@ -418,13 +418,24 @@ locally rather than by any unit test.
     when superseded; pushes to `main` **queue** behind the one in flight. `sast-policy`
     never runs on a `pull_request`, so cancelling a PR run can strand nothing.
   - `deleteincompletescan: '1'` on the upload step, passed through to the Veracode Java
-    wrapper. It deletes a scan not in `Results Ready`, except one in `Pre-Scan Success` —
-    so the `Incomplete` state a cancelled upload leaves is covered, while a cleanly
-    pre-scanned build awaiting module selection is not. `1` rather than `2` for that reason.
+    wrapper. The wrapper states its own meaning in the log: _"delete a scan with a status of
+    incomplete, no modules defined, failed, or canceled to proceed with uploadandscan
+    action."_ That covers the state a cancelled upload leaves behind. `1` rather than `2`
+    because `2` would also delete a build that pre-scanned cleanly and is waiting on module
+    selection.
 
-  Together: the first stops the stranding, the second recovers a profile already stranded
-  **without needing a human with Veracode platform access**. Until a run on `main` proves
-  the recovery, treat that as expected-to-work rather than confirmed.
+  Together: the first stops the stranding, the second recovers a profile already stranded.
+
+  **Both are now confirmed by a run rather than reasoned about.** Run `34312063025` on
+  `main` (the first after PR #17 merged) went: `deleteincompletescan 1` accepted →
+  `Pre-Scan Submitted` → `The status of the new analysis is "Results Ready"` →
+  `The policy status 'Did Not Pass' is not passing.` The profile that three previous runs
+  could not get past cleared itself, **with no human in the Veracode Platform**, and the job
+  went back to failing on the one documented disposition below and nothing else.
+
+  So the standing guidance is simpler than it was: a red `sast-policy` on `main` now means
+  the ADR-0015 Medium. If it ever again says `App not in state where new builds are allowed`,
+  that is a new bug, not this one.
 
 - **Two GitGuardian incidents may still read "Triggered"** in the dashboard (37100835, 37100836) from test fixtures committed and then removed while fixing ADR-0015. Both were
   invented values, never real credentials, so nothing needs rotating — but they should be
