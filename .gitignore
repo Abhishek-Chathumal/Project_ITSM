@@ -5,8 +5,12 @@ build/
 *.tsbuildinfo
 
 # env
+# Ignore every .env variant, then re-admit the committed template. The wildcard matters:
+# `.env` and `.env.local` alone leave `.env.bak`, `.env.save`, `.env.prod` and whatever an
+# editor or a careless backup drops next to them fully trackable, and `git add -A` will
+# happily stage a real secrets file under any of those names.
 .env
-.env.local
+.env.*
 !.env.example
 
 # logs

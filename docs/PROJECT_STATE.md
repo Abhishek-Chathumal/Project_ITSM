@@ -621,18 +621,17 @@ locally rather than by any unit test.
   (`@prisma/client@8.0.0-rc.13` is a 404). Installing "latest" pairs an RC CLI with a
   7.10.0 client, which Prisma requires to match. Pin `7.10.0`.
 
-- **`.env`'s `DATABASE_URL` password does not match `POSTGRES_PASSWORD`, which breaks every
-  host-native Prisma command after a `down -v`.** Postgres only applies `POSTGRES_PASSWORD`
-  at `initdb`, so the mismatch is invisible while an old volume survives and becomes
-  `P1000: Authentication failed` the moment the volume is recreated — which the standing
-  advice to run `down -v` after a dependency change guarantees will happen. It cost a
-  detour in the Slice 2b session before being spotted.
+- ~~**`.env`'s `DATABASE_URL` password does not match `POSTGRES_PASSWORD`**~~ — **fixed
+  2026-09-09.** Postgres only applies `POSTGRES_PASSWORD` at `initdb`, so the drift was
+  invisible while an old volume survived and became `P1000: Authentication failed` the moment
+  the volume was recreated — which the standing advice to `down -v` after a dependency change
+  guarantees will happen. It cost a detour in the Slice 2b session before being spotted.
 
-  Not committed (`.env` is gitignored) and not fixed for you — it is your secrets file. The
-  fix is to make the two agree; until then, host-native `prisma migrate`/`db seed` need
-  `DATABASE_URL` overridden from `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB` on the
-  command line. `.env.example` has the same shape, so it is worth checking whether the
-  placeholder pair there also disagrees.
+  `DATABASE_URL` in the local `.env` now derives from `POSTGRES_USER`/`POSTGRES_PASSWORD`/
+  `POSTGRES_DB`, verified by `prisma migrate status` running with no override. No credential
+  was rotated — the client string was simply made to match the password the server already
+  had. Previous file kept as `.env.bak-slice2b`. `.env.example` was already consistent
+  (`change-me` in both lines), so nothing committed needed changing.
 
 - **The dev `api` container will start itself and run the seed while you are mid-migration.**
   Observed in the Slice 2b session: `docker compose ... up -d postgres redis` brought `api`
@@ -941,6 +940,21 @@ constitution assumed admin-only user creation:
 - **Cloud hosting** once the app is usable for real work.
 
 ### Standing constraints
+
+- **Do not install PostgreSQL (or Redis) natively on the maintainer's machine — it is not
+  needed and it would break things.** Both run as containers, and `docker-compose.yml`
+  publishes `5432:5432` and (via the dev override) `6379:6379`, so `localhost:5432` from the
+  host already reaches the container. That is what host-native `npx prisma migrate` connects
+  to. A native PostgreSQL would contend for port 5432 with the container, and the symptom —
+  connecting successfully to the _wrong_ database — is considerably worse than a refused
+  connection. Confirmed 2026-09-09: no `postgres` service, no `psql` on PATH, nothing
+  listening on 5432 with the stack down.
+
+  The two paths that read a database URL are deliberately different, and only one can drift:
+  the **containers** build theirs from `${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432`
+  in `docker-compose.yml`, derived from the same variables that initialize the database, so
+  they cannot disagree. **Host-native** commands read the literal `DATABASE_URL` line in
+  `.env`, which is the one that drifted above.
 
 - **Security is top priority at every level** (maintainer's explicit instruction).
   Least privilege, audit everything, rate-limit public endpoints, no secrets in git,
