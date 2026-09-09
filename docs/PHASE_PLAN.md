@@ -85,21 +85,25 @@ documented disposition (one dismissed Medium, ADR-0015). Clearing it needs a mit
 approved in the Veracode platform by a human with the approver role. It blocks nothing —
 PRs are gated by `sast-pipeline`, which passes.
 
-### Slice 2 — Ticket data model
+### Slice 2 — Ticket data model ✅ DONE
 
-Entities per Part VII: `Ticket`, `TicketType`, `Category` (self-referencing for
-Category > Subcategory > Item), `Status` + `StatusWorkflow`, `Priority`, `Comment`.
+Delivered as `20260909043500_ticketing`: `Ticket`, `TicketType`, `StatusWorkflow`,
+`Status`, `Category` (self-referencing), `Priority`, `Impact`, `Urgency`, `PriorityMatrix`
+and `Comment`, with the seed data and **ADR-0016**.
 
-Key design points from the constitution:
+All three constitutional design points hold: one `Ticket` table for both types, priority
+derived from Impact × Urgency rather than chosen, and workflows per ticket type rather than
+one global enum. The ADR covers the tension that shaped it — names must be admin-editable,
+but code still has to reason about the lifecycle — resolved with a five-value
+`StatusCategory` enum that code branches on while `Status.name` stays data.
 
-- **One `Ticket` table** for both Incidents and Service Requests, distinguished by
-  `type` (§2.1 — "unified ticket object").
-- Priority is **derived from Impact × Urgency**, not freely chosen (§2.1).
-- Status workflows are **per ticket type**, configurable — not one global enum (§3.3).
+Verified against a real Postgres: migrations apply from empty with no drift, the seed is
+idempotent across three runs, a rename survives a re-seed while a tampered category is
+restored, and a ticket inserted end to end derives the right priority through the 3×3 grid.
+PROJECT_STATE §3 has the detail.
 
-**Done when:** migration applies cleanly, seed creates the default Incident workflow
-(`New → Open → In Progress → Pending (Customer) → Pending (Vendor) → Resolved → Closed →
-Reopened`), a starter category tree, and the priority matrix.
+**Not in this slice, by design:** transition rules (Slice 4), attachments (Slice 5), and the
+new permission keys (Slice 3 — they belong with the routes they guard).
 
 ### Slice 3 — Ticket API + RBAC
 

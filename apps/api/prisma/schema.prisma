@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   // "native" covers whatever host runs `prisma generate` (Windows/macOS/Linux dev
   // machines, CI runners). The explicit Debian target is for the Docker images, so the
   // correct engine is always present rather than depending on runtime OpenSSL detection.
@@ -17,17 +17,21 @@ enum UserStatus {
 }
 
 model User {
-  id           String       @id @default(uuid())
+  id           String      @id @default(uuid())
   name         String
-  email        String       @unique
-  passwordHash String?      @map("password_hash")
-  roleId       String       @map("role_id")
-  role         Role         @relation(fields: [roleId], references: [id])
-  departmentId String?      @map("department_id")
-  department   Department?  @relation(fields: [departmentId], references: [id])
-  mfaSecret    String?      @map("mfa_secret")
-  status       UserStatus   @default(active)
-  createdAt    DateTime     @default(now()) @map("created_at")
+  email        String      @unique
+  passwordHash String?     @map("password_hash")
+  roleId       String      @map("role_id")
+  role         Role        @relation(fields: [roleId], references: [id])
+  departmentId String?     @map("department_id")
+  department   Department? @relation(fields: [departmentId], references: [id])
+  mfaSecret    String?     @map("mfa_secret")
+  status       UserStatus  @default(active)
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  ticketsRequested Ticket[]  @relation("TicketRequester")
+  ticketsAssigned  Ticket[]  @relation("TicketAssignee")
+  comments         Comment[]
 
   @@map("users")
 }
@@ -68,6 +72,7 @@ model Department {
   parent       Department?  @relation("DeptHierarchy", fields: [parentDeptId], references: [id])
   children     Department[] @relation("DeptHierarchy")
   users        User[]
+  tickets      Ticket[]
 
   @@map("departments")
 }
@@ -81,10 +86,10 @@ model AuditLog {
   diff       Json?
   ipAddress  String?  @map("ip_address")
   createdAt  DateTime @default(now()) @map("created_at")
-
-  @@map("audit_logs")
   // Append-only by convention: AuditService exposes no update/delete methods and no
   // controller route ever targets this table for mutation (Article IV).
+
+  @@map("audit_logs")
 }
 
 model OrgSettings {
@@ -92,4 +97,268 @@ model OrgSettings {
   value Json
 
   @@map("org_settings")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 1 — ticketing (constitution Part II §2.1/§2.2, Part VII, §3.3)
+//
+// One Ticket table carries both Incidents and Service Requests; what separates
+// them is the TicketType row they point at, not a subclass or a second table.
+// Everything an admin is expected to rename, reorder or extend — types,
+// statuses, workflows, categories, priorities, the Impact x Urgency grid — is a
+// row rather than an enum, per Article II. The enums that remain are the ones
+// application code must branch on, which is what ADR-0016 is about.
+// ---------------------------------------------------------------------------
+
+/// Lifecycle meaning of a status, independent of what an admin renames it to.
+/// Code branches on this; it never matches on Status.name. See ADR-0016.
+enum StatusCategory {
+  triage
+  open
+  pending
+  resolved
+  closed
+
+  @@map("status_category")
+}
+
+/// Which semantic token the UI paints a thing with. Deliberately not a colour —
+/// the tokens live in apps/web/src/styles/globals.css and a restyle edits that
+/// file, not this table (ADR-0013).
+enum DisplayTone {
+  neutral
+  info
+  success
+  warning
+  danger
+  accent
+
+  @@map("display_tone")
+}
+
+/// Incident, Service Request, or anything an admin adds later. `key` is the
+/// stable handle code and seeds refer to, the same contract Permission.key has;
+/// `name` is the label and is free to change.
+model TicketType {
+  id           String   @id @default(uuid())
+  key          String   @unique
+  name         String
+  description  String?
+  isSystemType Boolean  @default(false) @map("is_system_type")
+  isActive     Boolean  @default(true) @map("is_active")
+  position     Int      @default(0)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // The workflow new tickets of this type enter. Optional because a type can be
+  // created before its workflow exists; the API requires one before a ticket of
+  // that type can be raised.
+  defaultWorkflowId String?         @map("default_workflow_id")
+  defaultWorkflow   StatusWorkflow? @relation(fields: [defaultWorkflowId], references: [id])
+
+  tickets Ticket[]
+
+  @@map("ticket_types")
+}
+
+/// A named set of statuses. Per ticket type today; per catalog item in Phase 2,
+/// which is why a workflow is not owned by a TicketType (§3.3).
+model StatusWorkflow {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  name        String
+  description String?
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  statuses    Status[]
+  ticketTypes TicketType[]
+
+  @@map("status_workflows")
+}
+
+/// One state within a workflow. Transition rules between statuses are Slice 4.
+model Status {
+  id         String         @id @default(uuid())
+  workflowId String         @map("workflow_id")
+  workflow   StatusWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  key        String
+  name       String
+  category   StatusCategory
+  tone       DisplayTone    @default(neutral)
+  /// Entry state for a newly raised ticket. Exactly one per workflow; enforced
+  /// in the service layer, since a partial unique index is not expressible here.
+  isInitial  Boolean        @default(false) @map("is_initial")
+  /// End of the line — nothing transitions out of it except a reopen.
+  isTerminal Boolean        @default(false) @map("is_terminal")
+  position   Int            @default(0)
+
+  tickets Ticket[]
+
+  @@unique([workflowId, key])
+  @@index([workflowId, position])
+  @@map("statuses")
+}
+
+/// Category > Subcategory > Item, to any depth (§2.1). Depth is not constrained
+/// in the schema; the UI presents three levels.
+model Category {
+  id       String     @id @default(uuid())
+  name     String
+  parentId String?    @map("parent_category_id")
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+  isActive Boolean    @default(true) @map("is_active")
+  position Int        @default(0)
+
+  tickets Ticket[]
+
+  @@index([parentId])
+  @@map("categories")
+}
+
+/// Never chosen directly — derived from Impact x Urgency through PriorityMatrix,
+/// then stored on the ticket (§2.1, ADR-0016).
+model Priority {
+  id       String      @id @default(uuid())
+  key      String      @unique
+  name     String
+  /// Ordering for queues and reports. Higher means more urgent.
+  weight   Int         @unique
+  tone     DisplayTone @default(neutral)
+  isSystem Boolean     @default(false) @map("is_system")
+
+  tickets       Ticket[]
+  matrixEntries PriorityMatrix[]
+
+  @@map("priorities")
+}
+
+/// How much of the organization is affected. A row, not an enum, so an admin can
+/// move between a 3x3 and a 5x5 grid without a migration.
+model Impact {
+  id    String @id @default(uuid())
+  key   String @unique
+  name  String
+  /// Higher means broader impact.
+  level Int    @unique
+
+  tickets       Ticket[]
+  matrixEntries PriorityMatrix[]
+
+  @@map("impacts")
+}
+
+/// How fast it needs attention.
+model Urgency {
+  id    String @id @default(uuid())
+  key   String @unique
+  name  String
+  /// Higher means more time-critical.
+  level Int    @unique
+
+  tickets       Ticket[]
+  matrixEntries PriorityMatrix[]
+
+  @@map("urgencies")
+}
+
+/// The admin-editable grid itself: one row per (impact, urgency) cell.
+model PriorityMatrix {
+  impactId   String   @map("impact_id")
+  impact     Impact   @relation(fields: [impactId], references: [id], onDelete: Cascade)
+  urgencyId  String   @map("urgency_id")
+  urgency    Urgency  @relation(fields: [urgencyId], references: [id], onDelete: Cascade)
+  priorityId String   @map("priority_id")
+  priority   Priority @relation(fields: [priorityId], references: [id])
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@id([impactId, urgencyId])
+  @@map("priority_matrix")
+}
+
+model Ticket {
+  id String @id @default(uuid())
+
+  /// The number people say out loud and search by ("#1042"). Separate from `id`
+  /// so the public handle stays short without making the primary key guessable
+  /// (ADR-0016).
+  number Int @unique @default(autoincrement())
+
+  title       String
+  /// Rich text. Sanitized on the way in; never rendered unsanitized.
+  description String
+
+  typeId     String     @map("type_id")
+  type       TicketType @relation(fields: [typeId], references: [id])
+  statusId   String     @map("status_id")
+  status     Status     @relation(fields: [statusId], references: [id])
+  categoryId String?    @map("category_id")
+  category   Category?  @relation(fields: [categoryId], references: [id])
+
+  // Impact and urgency are what a person picks; priority is what the matrix
+  // derived from them, stored here so editing the grid never rewrites the
+  // priority of a ticket that is already open.
+  impactId   String   @map("impact_id")
+  impact     Impact   @relation(fields: [impactId], references: [id])
+  urgencyId  String   @map("urgency_id")
+  urgency    Urgency  @relation(fields: [urgencyId], references: [id])
+  priorityId String   @map("priority_id")
+  priority   Priority @relation(fields: [priorityId], references: [id])
+
+  requesterId String      @map("requester_id")
+  requester   User        @relation("TicketRequester", fields: [requesterId], references: [id])
+  assigneeId  String?     @map("assignee_id")
+  assignee    User?       @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  /// The queue that owns it. Departments double as teams (Part VII).
+  teamId      String?     @map("team_id")
+  team        Department? @relation(fields: [teamId], references: [id])
+
+  /// §2.1 — escalation to a Major Incident. The broadcast and post-incident
+  /// review it triggers are Phase 3/4; the flag is recorded from Phase 1 so the
+  /// history is there when they land.
+  isMajorIncident Boolean @default(false) @map("is_major_incident")
+  /// Required to reach a Resolved status; the rule is enforced in Slice 4.
+  resolutionNotes String? @map("resolution_notes")
+
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  resolvedAt DateTime? @map("resolved_at")
+  closedAt   DateTime? @map("closed_at")
+
+  comments Comment[]
+
+  // Indexes follow the queues in §9.4: mine, my team's, unassigned — and every
+  // list is ordered newest-first.
+  @@index([requesterId, createdAt])
+  @@index([assigneeId, createdAt])
+  @@index([teamId, statusId])
+  @@index([statusId])
+  @@index([typeId])
+  @@index([categoryId])
+  @@index([createdAt])
+  @@map("tickets")
+}
+
+/// Threaded replies (§2.1). `isInternal` is a visibility boundary, not a UI hint:
+/// the API filters on it for anyone without ticket.comment.internal.
+model Comment {
+  id         String    @id @default(uuid())
+  ticketId   String    @map("ticket_id")
+  ticket     Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId   String    @map("author_id")
+  author     User      @relation(fields: [authorId], references: [id])
+  parentId   String?   @map("parent_comment_id")
+  parent     Comment?  @relation("CommentThread", fields: [parentId], references: [id])
+  replies    Comment[] @relation("CommentThread")
+  body       String
+  isInternal Boolean   @default(false) @map("is_internal")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  editedAt   DateTime? @map("edited_at")
+
+  @@index([ticketId, createdAt])
+  @@index([parentId])
+  @@map("comments")
 }

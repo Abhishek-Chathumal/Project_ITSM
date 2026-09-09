@@ -3,10 +3,9 @@
 Living record of where this project stands, how it got here, and what comes next.
 **Update this at the end of any significant work session.**
 
-Last updated: 2026-09-09 · Phase 0 complete; dependency/security pass, UI shell, and
-security scanning (SAST/SCA, ADR-0014) done, plus the production `SESSION_SECRET`
-requirement (ADR-0015) and the CI `npm audit` job that closes Phase 1 Slice 1;
-Phase 1 ticketing (Slice 2 onward) not started.
+Last updated: 2026-09-09 · Phase 0 complete. Phase 1 **Slice 1 done** (the CI `npm audit`
+job, and the six high advisories it found) and **Slice 2 done** (the ticket data model,
+ADR-0016). Slice 3, the ticket API and its RBAC scoping, is next.
 
 ---
 
@@ -70,11 +69,25 @@ This was deliberate (least privilege) and is a decision to revisit in Phase 1+ (
 
 ### Data model (Prisma, `apps/api/prisma/schema.prisma`)
 
-`User`, `Role`, `Permission`, `RolePermission`, `Department` (self-referencing hierarchy),
-`AuditLog` (append-only), `OrgSettings`. `User.passwordHash` and `User.mfaSecret` are
-nullable — forward-compat placeholders for SSO/MFA.
+**Identity and governance (Phase 0):** `User`, `Role`, `Permission`, `RolePermission`,
+`Department` (self-referencing hierarchy), `AuditLog` (append-only), `OrgSettings`.
+`User.passwordHash` and `User.mfaSecret` are nullable — forward-compat placeholders for
+SSO/MFA.
 
-One migration exists: `20260908054618_init`.
+**Ticketing (Phase 1 Slice 2, ADR-0016):** `TicketType`, `StatusWorkflow`, `Status`,
+`Category` (self-referencing tree), `Priority`, `Impact`, `Urgency`, `PriorityMatrix`,
+`Ticket`, `Comment`. One `Ticket` table carries both Incidents and Service Requests,
+separated by the `TicketType` row it points at. Two enums exist and only two:
+`StatusCategory` (`triage | open | pending | resolved | closed`) — what code branches on so
+it never matches an admin-renameable `Status.name` — and `DisplayTone`, which is a semantic
+token rather than a colour (ADR-0013). Everything else an admin edits is a row.
+
+Tickets carry a `number` (`SERIAL`, unique) beside the UUID `id`, because §9.3/§9.4 show
+people referring to `#1042`. Priority is derived from Impact × Urgency through the matrix
+and then **stored** on the ticket, so editing the grid never rewrites the priority of a
+ticket already in flight.
+
+Two migrations exist: `20260908054618_init` and `20260909043500_ticketing`.
 
 ### Seeded data (`apps/api/prisma/seed.ts`, idempotent upserts)
 
@@ -88,6 +101,23 @@ One migration exists: `20260908054618_init`.
   Requester / Technician / Team Lead / Change Manager get **zero** — this is the
   data-level proof of Article III, not an oversight.
 - One "Unassigned" department; optional bootstrap admin gated by `SEED_BOOTSTRAP_ADMIN`.
+
+Ticketing reference data lives in `apps/api/prisma/seed-ticketing.ts`, called from the same
+entry point and equally idempotent:
+
+- **2 ticket types** — Incident, Service Request — each pointing at **its own workflow**,
+  not a shared one, so §2.2's "distinct workflow template per type" is true in the data.
+- **2 workflows × 8 statuses**, the constitution's default lifecycle
+  (`New → Open → In Progress → Pending (Customer) → Pending (Vendor) → Resolved → Closed →
+Reopened`). The Service Request copy renames one state to "Fulfilled" — the same `key` and
+  `category`, a different label, which is the name/key separation demonstrated in the seed.
+- **3 impacts × 3 urgencies → 9 matrix cells → 4 priorities** (Critical/High/Medium/Low),
+  the standard ITIL 3×3 grid. Moving to a 5×5 is adding rows, not a migration.
+- **A 29-node category tree**, three levels deep under Hardware (`Hardware > Laptop >
+Screen`) so §2.1's example shape is real rather than theoretical.
+
+A re-seed deliberately does **not** overwrite a `Status.name` an admin has edited; it
+re-asserts only `category` and the lifecycle flags, which are code contracts.
 
 ### Frontend (`apps/web`, React + Vite + Tailwind)
 
@@ -260,6 +290,46 @@ Two things about the fix are worth keeping:
 The npm that generates the lockfile matters too: **npm 10 drops the `libc` fields** that
 optional-dependency selection uses on musl vs glibc, so it silently downgrades a lockfile
 written by npm 11+. Regenerate with the newer npm, not with the version in `packageManager`.
+
+### The ticket data model (2026-09-09) — Phase 1 Slice 2
+
+The tables every later slice writes against. The design and the alternatives it beat are in
+**ADR-0016**; what matters here is the one tension it resolves, and how it was checked.
+
+Article II wants statuses, workflows, categories, priorities and types to be rows an admin
+edits without a migration. But code has to answer "is this ticket still open?", "should the
+SLA clock be paused?", "does the reopen window apply?" — and if a status is only an
+admin-supplied string, every one of those becomes a string match that breaks silently the
+first time somebody renames "In Progress". So names are data, and a five-value
+`StatusCategory` enum is the contract code reads. Same seam as `Permission.key`.
+
+The other decision worth remembering: **priority is derived from the Impact × Urgency grid
+and then stored on the ticket.** Recomputing on read would let an admin's grid edit
+retroactively rewrite the priority of every ticket in flight — including the one a breached
+SLA was measured against.
+
+**Verified against a real Postgres**, not by inspection. Docker Desktop had to be started
+for it; for a schema change that is not optional:
+
+- both migrations apply to an empty database, and `migrate diff --from-url` against the
+  result comes back empty — no drift between the migration and the datamodel;
+- the seed runs, and running it three times leaves 29 categories / 16 statuses / 9 matrix
+  cells — idempotent, not merely re-runnable;
+- **the rename claim was tested rather than asserted.** Renaming `in_progress` to "Being
+  Worked" and corrupting its `category` to `closed`, then re-seeding, leaves the name
+  "Being Worked" and restores the category to `open`. Exactly the intended split: the label
+  belongs to the admin, the lifecycle semantics to the code;
+- a ticket inserted end to end comes back as `#1` (the `SERIAL` handle), category path
+  `Hardware > Laptop > Screen` — §2.1's own example, three levels deep — and priority
+  **Medium**, correctly derived from single-user impact × high urgency through the ITIL 3×3
+  grid;
+- a threaded internal comment attaches to it and is cascade-deleted with the ticket.
+
+One thing this slice fixed in passing: **the seed was type-checked nowhere.** It runs under
+`ts-node --transpile-only`, and `apps/api/tsconfig.json` scopes the build to `src`, so a
+wrong property name in a seed file could only ever be found by CI's seed step failing at
+runtime. `apps/api/tsconfig.seed.json` adds a no-emit pass over `prisma/**/*.ts`, and the
+api's `typecheck` script runs it.
 
 ### Bugs found and fixed (all caught by running it for real, not by tests)
 
