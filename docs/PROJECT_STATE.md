@@ -333,6 +333,42 @@ wrong property name in a seed file could only ever be found by CI's seed step fa
 runtime. `apps/api/tsconfig.seed.json` adds a no-emit pass over `prisma/**/*.ts`, and the
 api's `typecheck` script runs it.
 
+### Prisma 5.22 → 6.19.3 (2026-09-09)
+
+Taken before Phase 1 Slice 3 rather than after, deliberately: the repo has **42 Prisma call
+sites across three files today**, all plain CRUD, and Slice 3 is about to add filtering,
+pagination and scoped includes everywhere. This is the cheap moment.
+
+Each of v6's five breaking changes was checked against this schema rather than assumed:
+implicit m-n primary keys (we have none — `RolePermission` and `PriorityMatrix` are explicit
+join models), the `fullTextSearch` preview split (no `previewFeatures`), `Bytes` becoming
+`Uint8Array` (no `Bytes` fields), `NotFoundError` becoming `P2025` (never referenced; the one
+real `findUniqueOrThrow` is in `getSessionUserDto`, reached only after `SessionAuthGuard` has
+already proven the user exists), and `async`/`await`/`using` as reserved model names (none of
+our 17 models).
+
+**The upgrade brought a High advisory with it, and the new `audit` job is what surfaced it.**
+Prisma 6 depends on `@prisma/config`, which pins `deepmerge-ts` to exactly `7.1.5` —
+GHSA-ggr8-5vv4-36mx, stack exhaustion on recursive object graphs, fixed in 8.0.0. Upgrading
+further does not help: **7.10.0 pins the same 7.1.5**. So it is the multer situation again,
+and the same lever applies — a root `overrides` entry for `deepmerge-ts: ^8.0.0`, with the
+lockfile regenerated from a clean copy per gotcha 9. `npm audit` is back to 0 afterwards, and
+`prisma generate` exercising `@prisma/config` is the proof the override is compatible.
+
+Verified by running it, at every layer:
+
+- `generate`, `migrate deploy` from an empty database, and `migrate diff --from-url` coming
+  back empty — no drift;
+- the seed, including argon2 hashing, leaving 10 permissions / 16 statuses / 9 matrix cells;
+- the **containerized** stack, because a Prisma major is exactly gotcha 1's territory: the
+  API image built, booted, applied both migrations, and served `/health`;
+- login `200`, `/auth/login` and `/auth/me` byte-identical, `/users` 200 with a session and
+  401 without, `/audit-logs` 200.
+
+Prisma 6 also prints the signpost for the next step on every CLI run: _"The configuration
+property `package.json#prisma` is deprecated and will be removed in Prisma 7."_ §4 records
+what 7 actually involves, and why it is a genuine architecture change rather than a bump.
+
 ### Bugs found and fixed (all caught by running it for real, not by tests)
 
 1. **`/auth/me` and `/auth/login` returned different shapes** — `me` returned the internal
@@ -369,8 +405,27 @@ locally rather than by any unit test.
   the config spec (added with ADR-0015), and one component render test. The constitution
   (Part XIII) asks for integration tests incl. RBAC enforcement and E2E journeys.
   **Still the largest gap.**
-- `Prisma 5.22` — an 8.x major exists. Upgrade deliberately, not incidentally; the CLI
-  prints an upgrade notice on every `generate`.
+- **`Prisma 6.19.3` — 7.10.0 is the next step, and it is an architecture change, not a
+  bump.** Prisma 7 replaces the Rust engines with driver adapters, deprecates
+  `prisma-client-js` for a Rust-free `prisma-client` generator whose `output` is required
+  (so the client no longer lands in `node_modules`), and requires a root `prisma.config.ts`
+  with seeding moved onto it. Prisma 6 already warns about the last one on every CLI run:
+  _"The configuration property `package.json#prisma` is deprecated and will be removed in
+  Prisma 7."_
+
+  Two consequences worth knowing before starting. `api.Dockerfile`'s
+  `COPY --from=build /repo/node_modules/.prisma` copies **nothing** once the client
+  generates elsewhere — and that fails at _boot_, not build, so only `smoke` catches it.
+  And **ADR-0009 would need superseding**: its whole premise is the Rust engine
+  mis-detecting OpenSSL on musl, which stops applying when there is no Rust engine — so
+  Debian-over-Alpine may no longer be required, which could take a large bite out of the
+  540 MB API image.
+
+  **Do not install `prisma@latest`.** Checked 2026-09-09: that tag is `8.0.0-rc.13`, a
+  release candidate, while `@prisma/client` has no 8.x published at all
+  (`@prisma/client@8.0.0-rc.13` is a 404). Installing "latest" pairs an RC CLI with a
+  7.10.0 client, which Prisma requires to match. Pin `7.10.0`.
+
 - **Middleware-level rejections carry no `requestId`** in the response body, because
   `nestjs-pino` assigns `req.id` after the CSRF middleware has already rejected. Nest-level
   errors are unaffected. See ADR-0012's consequences.
