@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { DEFAULT_ROLES, PERMISSIONS } from '@itsm/shared';
+import { seedTicketing } from './seed-ticketing';
 
 const prisma = new PrismaClient();
 
@@ -99,6 +100,8 @@ async function main() {
     });
     adminCreated = true;
   }
+
+  await seedTicketing(prisma);
 
   console.log(
     `Seed complete: roles=${roles.size}, permissions=${permissions.size}, department=1, bootstrapAdmin=${adminCreated}`,

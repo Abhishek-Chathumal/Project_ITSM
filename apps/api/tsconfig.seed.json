@@ -1,0 +1,13 @@
+// The seed runs through `ts-node --transpile-only`, which does no type checking at all —
+// so without this, a wrong property name in `prisma/seed*.ts` is only ever discovered by
+// CI's seed step failing at runtime, or worse, by writing the wrong data quietly.
+// `tsconfig.json` scopes the build to `src`, so the seed gets its own no-emit pass.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true
+  },
+  "include": ["prisma/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
