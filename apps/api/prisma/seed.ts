@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { DEFAULT_ROLES, PERMISSIONS } from '@itsm/shared';
 import { seedTicketing } from './seed-ticketing';
+import { buildPath } from '../src/common/tree/materialized-path';
 
 const prisma = new PrismaClient();
 
@@ -71,10 +72,21 @@ async function main() {
   }
 
   console.log('Seeding default department...');
+  // A fixed id so the row is stable across environments, which also means its materialized
+  // path is known ahead of the insert rather than needing the write-then-update dance the
+  // tree seeder does. Root node, so depth 0 and a single-segment path.
+  const DEFAULT_DEPARTMENT_ID = '00000000-0000-0000-0000-000000000001';
   const department = await prisma.department.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000001' },
-    create: { id: '00000000-0000-0000-0000-000000000001', name: 'Unassigned' },
-    update: {},
+    where: { id: DEFAULT_DEPARTMENT_ID },
+    create: {
+      id: DEFAULT_DEPARTMENT_ID,
+      name: 'Unassigned',
+      path: buildPath(DEFAULT_DEPARTMENT_ID, null),
+      depth: 0,
+    },
+    // Re-asserted rather than left alone: `path` is derived data, not an admin's label, and
+    // a row whose path drifted from its parentage would silently break `department` scope.
+    update: { path: buildPath(DEFAULT_DEPARTMENT_ID, null), depth: 0 },
   });
 
   let adminCreated = false;

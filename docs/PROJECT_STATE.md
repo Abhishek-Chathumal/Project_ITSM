@@ -96,9 +96,9 @@ This was deliberate (least privilege) and is a decision to revisit in Phase 1+ (
 ### Data model (Prisma, `apps/api/prisma/schema.prisma`)
 
 **Identity and governance (Phase 0):** `User`, `Role`, `Permission`, `RolePermission`,
-`Department` (self-referencing hierarchy), `AuditLog` (append-only), `OrgSettings`.
-`User.passwordHash` and `User.mfaSecret` are nullable — forward-compat placeholders for
-SSO/MFA.
+`Department` (self-referencing hierarchy, with a materialized `path`/`depth` since Slice 2b),
+`AuditLog` (append-only), `OrgSettings`. `User.passwordHash` and `User.mfaSecret` are
+nullable — forward-compat placeholders for SSO/MFA. `User.locationId` was added by Slice 2b.
 
 **Ticketing (Phase 1 Slice 2, ADR-0016):** `TicketType`, `StatusWorkflow`, `Status`,
 `Category` (self-referencing tree), `Priority`, `Impact`, `Urgency`, `PriorityMatrix`,
@@ -113,7 +113,25 @@ people referring to `#1042`. Priority is derived from Impact × Urgency through 
 and then **stored** on the ticket, so editing the grid never rewrites the priority of a
 ticket already in flight.
 
-Two migrations exist: `20260908054618_init` and `20260909043500_ticketing`.
+**Ownership, scope and B2 fields (Phase 1 Slice 2b, ADR-0018):** `TechnicianGroup` +
+`TechnicianGroupMember` (many-to-many), `Location` (self-referencing tree), `TicketSource`,
+`ClosureCode`, `TicketWatcher`, `TicketCollaborator`.
+
+The load-bearing change is that **the four ownership axes are now four columns**, because
+Ref I3.1 makes `own`, `group`, `department` and `location` four different scope values:
+`Ticket.groupId` (who works it), `.departmentId` (classification), `.locationId` (which
+site), plus the requester/assignee/watcher/collaborator set that constitutes `own`. Slice 2's
+single `Ticket.teamId → Department` could answer only two of them and conflated the other
+two. `Category`, `Department` and `Location` all carry a materialized `path`/`depth`
+maintained by one shared helper (`common/tree/materialized-path.ts`), indexed with
+`text_pattern_ops` so a subtree prefix match is actually indexed.
+
+`Ticket` also gained B2's Phase-1 fields: `source`, `tags` (a `String[]` with a GIN index),
+`diagnosis`/`solution`/`closureCode` beside `resolutionNotes`, merge parent/child, the two
+escalation **level counters**, and the `isSpam`/`archivedAt` flags Ref B5 requires.
+
+Three migrations exist: `20260908054618_init`, `20260909043500_ticketing` and
+`20260909111353_request_model_b2_b3`.
 
 ### Seeded data (`apps/api/prisma/seed.ts`, idempotent upserts)
 
@@ -440,6 +458,75 @@ Prisma 6 also prints the signpost for the next step on every CLI run: _"The conf
 property `package.json#prisma` is deprecated and will be removed in Prisma 7."_ §4 records
 what 7 actually involves, and why it is a genuine architecture change rather than a bump.
 
+### Slice 2b — the request model, and four scope values that had no schema (2026-09-09)
+
+Planned as a small reconciliation of the ticket model with Functional Reference B2 and B3.
+It was not small, and the reason is worth keeping.
+
+The written plan named one blocker for Phase 0's `applyScope()`: Ref I3 counts a **watcher**
+and a **collaborator** as `own` scope, and neither existed in the schema, so a scope helper
+written first would implement a narrower `own` than the spec — passing its tests and still
+being wrong. That reasoning was correct. Checking it against all seven scope values in I3.1
+rather than just `own` showed **four** that could not have been implemented correctly:
+
+- `own` — requester and assignee only. Too narrow.
+- `group` — **no table at all.** `Ticket.teamId` pointed at `Department`, so `group` and
+  `department` scope would have resolved through the same column. Ref B1 makes a Technician
+  Group its own entity that "a technician may belong to several" of; B2 lists Technician
+  Group and Department as separate fields; G3.3 gives each group its own business hours.
+  ADR-0016's "Departments double as teams" was defensible against the constitution alone and
+  is not against I3.1.
+- `department` — parent FK only, no materialized path, so "including sub-departments" is a
+  recursive query per request or silently single-level.
+- `location` — **no table, no column, anywhere**, while Ref B4 says location "doubles as a
+  security filter".
+
+All four fail the same way: quietly. A too-narrow scope produces a support ticket; a too-wide
+one produces nothing at all until someone notices they can read another department's records.
+That is the failure mode constitution 5.2 exists to prevent, and the argument for building
+this before the helper rather than after.
+
+**What landed:** the four ownership columns and their join tables; `TechnicianGroup` with
+many-to-many membership; a `Location` tree; one shared materialized-path helper serving
+Category, Department and Location (Ref B4 asks for exactly one, and `User.reporting_path`
+will be its fourth user in Slice 0b); the 3×4 priority matrix; `PriorityResolverService`;
+`isOperationallyActive()` for Ref B5; and B2's Phase-1 fields. **ADR-0018** carries the
+decisions, and ADR-0016's header now points at it.
+
+**Two design choices that are the substance rather than the paperwork:**
+
+- **The priority matrix was widened, not rewritten.** All nine original cells kept the
+  priority they had; only the fourth urgency column is new. Nothing already classified was
+  reclassified — the change adds a classification that was previously inexpressible.
+- **`PriorityResolverService` has no update path.** B3's rule is that an explicitly set
+  priority is never overridden, and the way to enforce that is not to implement the thing
+  that would violate it. An ordinary edit has nothing to call. `rederive()` exists as a
+  separate, deliberate act gated by `request.priority.override`.
+
+**Two bugs found by building it rather than by reading:**
+
+- **The path index Prisma generates by default is wrong for the query it exists to serve.** A
+  subtree test is `path LIKE '/a/b/%'`, and PostgreSQL will not use a plain text btree for a
+  prefix `LIKE` unless the collation is C. The default produces correct results and
+  sequential-scans, which is precisely the sort of thing that survives review. The three tree
+  indexes are `text_pattern_ops`.
+- **A materialized path needs _both_ separators.** `/1/7/`, not `/1/7`. Without the trailing
+  one, `startsWith('/1/7')` also matches `/1/70/` — a sibling subtree silently pulled into a
+  scoped query. There is a test for it, using ids chosen to collide.
+
+**Verified by running it, from an empty database:** migration applies with no drift, the seed
+is idempotent across three runs (12 matrix cells, 4 urgencies, 8 locations, 29 categories),
+`verify-slice-2b.ts` passes 30 checks including B3's worked example and a subtree prefix that
+correctly excludes its sibling, and the API boots and authenticates with `RequestsModule`
+registered — which is why that module is registered now rather than with Slice 3, since an
+`@Injectable()` nobody provides type-checks, passes its unit tests, and fails on first
+resolution.
+
+**Two things left deliberately undone:** the null-department trap is Slice 0c's to fix (the
+schema cannot prevent it; only the helper can), and **type conversion** is designed but not
+built, because mapping a status onto the target type's workflow needs Slice 4's transition
+rules to exist first.
+
 ### The spec was revised, and Phase 0 re-opened (2026-09-09)
 
 Two documents arrived: a rewritten constitution and a new companion, the **Functional
@@ -533,6 +620,27 @@ locally rather than by any unit test.
   release candidate, while `@prisma/client` has no 8.x published at all
   (`@prisma/client@8.0.0-rc.13` is a 404). Installing "latest" pairs an RC CLI with a
   7.10.0 client, which Prisma requires to match. Pin `7.10.0`.
+
+- **`.env`'s `DATABASE_URL` password does not match `POSTGRES_PASSWORD`, which breaks every
+  host-native Prisma command after a `down -v`.** Postgres only applies `POSTGRES_PASSWORD`
+  at `initdb`, so the mismatch is invisible while an old volume survives and becomes
+  `P1000: Authentication failed` the moment the volume is recreated — which the standing
+  advice to run `down -v` after a dependency change guarantees will happen. It cost a
+  detour in the Slice 2b session before being spotted.
+
+  Not committed (`.env` is gitignored) and not fixed for you — it is your secrets file. The
+  fix is to make the two agree; until then, host-native `prisma migrate`/`db seed` need
+  `DATABASE_URL` overridden from `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB` on the
+  command line. `.env.example` has the same shape, so it is worth checking whether the
+  placeholder pair there also disagrees.
+
+- **The dev `api` container will start itself and run the seed while you are mid-migration.**
+  Observed in the Slice 2b session: `docker compose ... up -d postgres redis` brought `api`
+  and `web` up too, `api`'s `CMD` ran `prisma migrate deploy && prisma db seed` against a
+  schema that did not yet have the columns the new seed writes, and it died in a restart loop
+  that took Postgres down with it. Use `--no-deps` when bringing up only the backing services
+  for schema work: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+--no-deps postgres redis`.
 
 - **Middleware-level rejections carry no `requestId`** in the response body, because
   `nestjs-pino` assigns `req.id` after the CSRF middleware has already rejected. Nest-level
@@ -672,6 +780,12 @@ the DTOs, which are unaffected.
 
 ### What Phase 0 now needs before Slice 3 can start properly
 
+**Order decided (2026-09-09): Prisma 7 first, then 0a → 0d.** Slice 2b is already merged, so
+its half of Slice 0c's dependency is satisfied. The reasoning for putting Prisma 7 ahead of
+the access-control work rather than after it is under "The other open decision" below —
+short version, `applyScope()` should be written once against final tooling, because a
+careless port of _that_ file is a silent data leak.
+
 ADR-0017 has the full gap table. In dependency order:
 
 1. **The permission manifest** — a versioned file in the repo that seeds the ~150-entry
@@ -686,63 +800,101 @@ ADR-0017 has the full gap table. In dependency order:
 3. **`applyScope()`** — one helper, the only place that knows what `department` means.
 4. **The privilege safety rules (5.3a / Ref I8)** as acceptance criteria, not follow-ups.
 
-### Slice 2's data model is also partially superseded — by B2 and B3, not by A-001
+### Slice 2's data model was partially superseded — by B2, B3 and I3. ✅ Now reconciled.
 
-Separate from the permission story, and easy to miss because it is not an amendment: the
-Functional Reference specifies the request object in more detail than the constitution's 7.2
-table that ADR-0016 was written against. Nothing merged is broken — no API reads any of this
-yet — but three things are known-wrong rather than merely thin.
+Delivered on `claude/slice-2b-request-model` as migration `20260909111353_request_model_b2_b3`
+with **ADR-0018**. This section previously listed four things to fix; the slice found a fifth
+that was larger than the other four together, and it is worth recording why it was missed.
 
-**1. The seeded priority matrix is the wrong shape (Ref B3).**
+**The gap that was named here was `own` scope: Ref I3 counts watcher and collaborator as
+"own", and neither existed. That reasoning was right, and it generalizes.** Checked against
+all seven scope values in I3.1, **four** could not have been implemented correctly:
 
-|         | Merged (Slice 2 seed) | Ref B3                                          |
-| ------- | --------------------- | ----------------------------------------------- |
-| Impact  | 3 levels              | 3 — `On User` → `On Department` → `On Business` |
-| Urgency | 3 levels              | **4** — Low, Medium, High, Urgent               |
-| Cells   | 9                     | **12**                                          |
+| Scope        | State as merged in Slice 2                        | How it would have failed                                                 |
+| ------------ | ------------------------------------------------- | ------------------------------------------------------------------------ |
+| `own`        | requester + assignee only                         | too narrow — a watcher cannot see the ticket they watch                  |
+| `group`      | no table; `Ticket.teamId` pointed at `Department` | **wrong set in both directions** — see below                             |
+| `department` | parent FK only, no materialized path              | sub-department scope becomes recursive, or silently single-level         |
+| `location`   | **no table, no column, anywhere**                 | unimplementable — and a `default:` fall-through would render it as `all` |
 
-Labels are admin-editable data so the naming difference is immaterial; **the missing fourth
-urgency level is not.** Fixing it is a seed change plus three new matrix rows, no migration.
+**`group` was the worst and the least visible.** Ref I3.1 lists `group` ("the user's
+technician group(s)") and `department` as two different scope values. Ref B1 makes a
+Technician Group its own entity that "a technician may belong to several" of, B2 lists
+Technician Group and Department as separate fields on a request, and G3.3 gives each group
+its own business hours (which is what makes Phase 2's SLA calculation team-aware). ADR-0016
+had collapsed the two — "Departments double as teams" — which was defensible against the
+constitution alone and is not against I3.1.
 
-**2. Priority derivation must be conditional, and this is the part that gets built wrong.**
-B3: the matrix _"fires only when Priority is left blank at creation. An explicitly set priority
-is never overridden."_ Implement as `resolvePriority()` called on create when `priority_id IS
-NULL` — not on every write. B3 explicitly calls for a test that **a manually-set priority
-survives a subsequent impact change**, and `request.priority.override` (Ref I2.1) is the
-permission that gates setting it by hand.
+What landed:
 
-**3. `Ticket` is missing fields B2 groups as core.** Several belong to later phases (SLA
-timers → Phase 2; linked problem/change, tasks, approvals → Phase 3/4), but these are Phase 1:
+- **Four ownership axes, four columns.** `Ticket.teamId → Department` becomes
+  `groupId → TechnicianGroup`, `departmentId → Department`, `locationId → Location`, plus
+  `TicketWatcher` / `TicketCollaborator` join tables and `User.locationId` /
+  `TechnicianGroupMember` for the user side. Group membership is **many-to-many** — the part
+  a single FK could not express.
+- **One materialized-path tree helper** (`common/tree/materialized-path.ts`), per Ref B4's
+  instruction to implement it once rather than three times. Serves Category, Department and
+  Location; `User.reporting_path` (I3.2) becomes the fourth user in Slice 0b. Pure functions,
+  no database, cycle guard and depth ceiling that throw rather than return a boolean.
+- **The priority matrix is 3×4** — widened, not rewritten. All nine original cells kept their
+  priority; only the fourth urgency column is new. So nothing already classified was
+  reclassified. Impact labels moved to B3's vocabulary (`On User` → `On Department` →
+  `On Business`); the keys did not, because a key is the contract.
+- **`PriorityResolverService` has no update path.** That absence is what enforces B3's rule
+  rather than merely intending it — an ordinary edit has nothing to call. `rederive()` is a
+  separate, deliberate act gated by `request.priority.override` at the Slice 3 caller.
+- **B2's Phase-1 fields:** `source` and `tags`, `diagnosis`/`solution`/`closureCode` beside
+  `resolutionNotes`, merge parent/child, and escalation **level counters** rather than
+  booleans.
+- **`isOperationallyActive()`** (Ref B5) as one predicate plus its matching Prisma filter,
+  with a test asserting the two agree — two expressions of one rule drift invisibly.
 
-- **Identity:** `source` (the channel it arrived through — B1 is explicit that this is metadata
-  on the ticket, _never a separate data path_, and `Source is changed` is an automation
-  trigger) and `tags`.
-- **Ownership:** `location`, plus **watchers** and **collaborators** as distinct participant
-  sets — neither is the assignee, and both affect `own` scope (Ref I3 counts watcher and
-  collaborator as "own").
-- **Resolution:** `diagnosis`, `solution` and `closure_code` as separate fields; today there is
-  one `resolutionNotes`.
-- **Merge:** parent/child columns — Part XII puts manual merge in Phase 1.
-- **Escalation:** response and resolution escalation **level counters**. B2 is emphatic that a
-  `breached` boolean cannot express "escalated twice, now with the team lead".
+**Two things worth carrying forward, because neither is enforceable by schema:**
 
-**4. Type conversion is a first-class Phase 1 operation** (B1, and Part XII's Phase 1 row).
-Incident ↔ Service Request is not just a `typeId` update: each type points at its own workflow,
-so conversion has to map the current status onto the target workflow. Worth designing before
-the API, not after.
+- **`applyScope()` must fail closed on a scope it cannot implement.** Four scope values had
+  no schema behind them until this slice; a `default:` branch returning an unfiltered query
+  turns "unimplemented" into `all`.
+- **The null-department trap is untouched and still Slice 0c's job.** A user with a null
+  `departmentId` must contribute _nothing_ to a department-scoped clause, never
+  `{ departmentId: null }` — which Prisma renders as `department_id IS NULL` and which
+  matches every unassigned record. `verify-slice-2b.ts` records this as a live fact against
+  real data so it is not rediscovered the hard way.
 
-> The `own` scope definition matters more than it looks: Ref I3 counts a user as "own" if they
-> are **requester, assignee, watcher, or collaborator**. Since watchers and collaborators do not
-> exist in the schema yet, an `applyScope()` written today would silently implement a narrower
-> `own` than the spec defines. Build the columns first, or the scope helper is wrong from day
-> one.
+**Type conversion (Incident ↔ Service Request) is designed, not built.** Ref B1 makes it
+first-class and Part XII puts it in Phase 1. The schema supports it already, but each type
+points at its own workflow, so conversion must **map the current status onto the target
+workflow** rather than swap `typeId`. That needs Slice 4's transition rules to exist before
+the target set is anything but a guess. The design is in ADR-0018.
+
+**One index detail that would have been invisible:** the tree `path` columns are indexed with
+`text_pattern_ops`, not a default btree. A subtree test is `path LIKE '/a/b/%'`, and
+PostgreSQL will not use a plain text btree for a prefix `LIKE` unless the database collation
+is C. The default Prisma generates produces correct results and sequential-scans — which is
+exactly the kind of thing that survives review and shows up as latency months later.
 
 ### The other open decision
 
-**Prisma 7 versus starting the Phase 0 access-control work.** §4 records what 7 involves. It
-is still cheaper before the query surface grows, and `applyScope()` is exactly the kind of
-query-layer work that would have to be rewritten against driver adapters afterwards — which
-strengthens the case for doing Prisma 7 first. Not decided.
+**Prisma 7 versus starting the Phase 0 access-control work.** §4 records what 7 involves.
+**Decided: Prisma 7 next, before Phase 0's Slices 0a–0d.**
+
+One correction to the reasoning this section previously carried. It claimed `applyScope()`
+"would have to be rewritten against driver adapters" — that overstates it. Driver adapters
+change how `PrismaClient` is _constructed_ (`PrismaService`), not how a where-clause helper
+composes filters; the real port cost is import paths, because the `prisma-client` generator's
+required `output` moves the generated types out of `@prisma/client`.
+
+The weaker argument still lands in the same place, and for a better reason. Porting
+`applyScope()` means touching its type origins and re-verifying every filter it builds, and a
+careless port of _that_ file is a silent data leak. Writing it once against final tooling is
+a security argument, not a convenience one. Supporting points: the query surface is at its
+minimum right now (no service queries tickets), and Prisma 7 is pure infrastructure with no
+feature semantics, so `smoke` and `smoke-dev` can verify it end to end.
+
+**Not first, though — Slice 2b went first.** Prisma 7 is the highest-variance item on the
+list (generator output moves, `api.Dockerfile`'s `COPY .prisma` breaks at _boot_ not build,
+possible Alpine switch). Landing it before a purely additive schema slice would have meant
+two candidate causes for any broken dev stack. It only has to precede Slice 0c, not
+everything.
 
 ---
 

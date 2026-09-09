@@ -74,8 +74,22 @@ gap table, PROJECT_STATE §4b the detail):
   move.
 - **Slice 0c — `applyScope(query, user, permission)`.** One helper, the only place that knows
   what `department` means. Unit-tested per scope kind, including the null-department case.
-  **Depends on Phase 1 Slice 2b**, because Ref I3 defines `own` as requester, assignee,
-  **watcher or collaborator** — and the last two are not in the schema yet.
+  ✅ **Its dependency, Slice 2b, is now merged** — all seven scope values in Ref I3.1 have
+  schema behind them (ADR-0018). Four did not before: `own` lacked watchers and
+  collaborators, `group` had no table at all and was aliased onto `department`, `location`
+  had no table or column anywhere, and `department` had no materialized path.
+
+  **Three rules for the helper itself, none of which the schema can enforce:**
+  - **Fail closed on an unknown or unimplementable scope.** A `default:` branch that returns
+    an unfiltered query turns "unimplemented" into `all`. This is the highest-value line in
+    the file.
+  - **A null `departmentId` (or `locationId`) contributes _nothing_** — never
+    `{ departmentId: null }`, which PostgreSQL renders as `department_id IS NULL` and which
+    matches every unassigned record.
+  - **Subtree scopes are a prefix match on `path`**, using the `text_pattern_ops` indexes
+    ADR-0018 laid down. Both path separators are mandatory: `/1/7/` must not match `/1/70/`.
+    `common/tree/materialized-path.ts` already has the predicate — use it, do not re-derive it.
+
 - **Slice 0d — the twelve seeded default roles**, permission-locked (membership editable,
   permission set not), plus the privilege safety rules from 5.3a / Ref I8 as acceptance
   criteria rather than follow-ups.
@@ -144,35 +158,42 @@ new permission keys (Slice 3 — they belong with the routes they guard).
 > matrix is the wrong shape and several core fields are absent. Nothing is broken (no API
 > reads it yet), but do not treat this slice as settled.
 
-### Slice 2b — Reconcile the request model with B2 and B3
+### Slice 2b — Reconcile the request model with B2 and B3 ✅ DONE
 
-Small, and it must land **before** Slice 0c's `applyScope()`, for the reason in the last bullet.
+Delivered as `20260909111353_request_model_b2_b3` with **ADR-0018**. It was planned as small
+and was not: reading Ref I3.1 alongside Part B turned up that **four of the seven scope
+values could not have been implemented correctly**, not one.
 
-- **Priority matrix → 3×4.** Add the fourth urgency level (Ref B3: Low, Medium, High, Urgent)
-  and the three resulting matrix cells. Seed change, no migration.
-- **`resolvePriority()`** — fires **only when `priority_id IS NULL` at creation**; an explicitly
-  set priority is never overridden. Test that a manually-set priority survives a later impact
-  change (B3 names this as the case implementations get wrong).
-- **Phase-1 fields from B2:** `source` and `tags`; `location`; `diagnosis` / `solution` /
-  `closure_code` alongside the existing `resolutionNotes`; merge parent/child columns;
-  response and resolution escalation **level counters** — counters, not booleans, because
-  "escalated twice, now with the team lead" has to be expressible.
-- **Watchers and collaborators** as distinct participant sets.
-- **Type conversion** (Incident ↔ Service Request) designed as a first-class operation per B1 —
-  each type has its own workflow, so conversion must map the current status onto the target
-  workflow rather than just swapping `typeId`.
+| Scope        | Before                                            | Now                                                       |
+| ------------ | ------------------------------------------------- | --------------------------------------------------------- |
+| `own`        | requester + assignee                              | `TicketWatcher` + `TicketCollaborator` added              |
+| `group`      | no table; `Ticket.teamId` pointed at `Department` | `TechnicianGroup` + many-to-many `TechnicianGroupMember`  |
+| `department` | parent FK only                                    | materialized `path`/`depth`, `text_pattern_ops` index     |
+| `location`   | **no table, no column, anywhere**                 | `Location` tree + `User.locationId` + `Ticket.locationId` |
 
-**Why this blocks `applyScope()`:** Ref I3 defines `own` scope as requester, assignee,
-**watcher, or collaborator**. Those last two do not exist in the schema yet, so a scope helper
-written today would silently implement a narrower `own` than the spec — passing its tests and
-still being wrong.
+Also landed: the 3×4 priority matrix (widened, not rewritten — all nine original cells kept
+their priority); `PriorityResolverService` with **no update path**, which is what enforces
+B3's "an explicitly set priority is never overridden"; the B2 Phase-1 fields (`source`,
+`tags`, `diagnosis`/`solution`/`closureCode`, merge parent/child, escalation level
+**counters**); `isOperationallyActive()` for Ref B5; and one shared materialized-path tree
+helper serving Category, Department and Location — the fourth user, `User.reporting_path`,
+is Slice 0b.
 
-**Done when:** the matrix is 3×4, a manually-set priority survives an impact change under test,
-and `own` can be expressed over all four participant kinds.
+Verified against a real Postgres from an empty database: migration applies with no drift, the
+seed is idempotent across three runs, `verify-slice-2b.ts` passes 30 checks including the
+B3 worked example and a subtree prefix that excludes its sibling, and the API boots and
+authenticates with `RequestsModule` registered.
+
+**Not in this slice, by design:** **type conversion** (Incident ↔ Service Request) is
+designed but not built. The schema already supports it — one table, `typeId` a column — but
+each type has its own workflow, so conversion must **map the current status onto the target
+workflow**, not just swap `typeId`. That mapping needs Slice 4's transition rules to exist
+before the target set can be anything but a guess. ADR-0018 records the design.
 
 ### Slice 3 — Request API + scoped authorization
 
-> **Rewritten by Amendment A-001, and now depends on Phase 0's Slices 0a–0c.** The earlier
+> **Rewritten by Amendment A-001, and now depends on Phase 0's Slices 0a–0c.** Slice 2b's
+> half of the dependency is done (ADR-0018); the access-control half is not. The earlier
 > version of this slice listed `ticket.view.own` / `.team` / `.all` as separate keys. Those
 > collapse into **one** permission carrying a scope. Do not start this before `applyScope()`
 > exists — the whole point of A-001's phasing is that scope is not retrofitted.
