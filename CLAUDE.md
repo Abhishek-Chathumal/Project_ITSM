@@ -205,11 +205,13 @@ the Veracode Java wrapper directly in a `run:` step — the working command line
 
 Each of these was a real production-blocking bug. They're fixed; keep them fixed.
 
-1. **Prisma needs a Debian base image, not Alpine.** On musl, Prisma mis-detects
-   OpenSSL, loads an `openssl-1.1.x` engine, and dies with
-   `Could not parse schema engine response`. `api.Dockerfile` uses
-   `node:24-bookworm-slim` + explicit `openssl`; `schema.prisma` pins
-   `binaryTargets = ["native", "debian-openssl-3.0.x"]`. (ADR-0009)
+1. **Prisma still runs on a Debian base — but the reason changed, so don't "fix" it from
+   the old one.** `api.Dockerfile` uses `node:24-bookworm-slim` + explicit `openssl`. The
+   original cause (Prisma's Rust engine mis-detecting OpenSSL on musl and dying with
+   `Could not parse schema engine response`) **no longer applies**: Prisma 7 has no Rust query
+   engine, and `binaryTargets` is gone from `schema.prisma` (ADR-0019). Alpine is plausible
+   now and untested — the Prisma CLI still ships in the runtime image and its schema engine is
+   a separate question. Trying it is a follow-up with its own ADR superseding ADR-0009.
 
 2. **The Vite dev proxy must target the compose service name.** Inside the `web`
    container `localhost` is that container. `vite.config.ts` reads
@@ -220,8 +222,12 @@ Each of these was a real production-blocking bug. They're fixed; keep them fixed
    exports from CJS, so a CJS-only build breaks the production web build with
    "is not exported by". Don't collapse it back to one output.
 
-4. **`prisma generate` must run before migrate/seed** in any fresh environment —
-   `npm ci` won't do it, because the schema isn't at the conventional root path.
+4. **`prisma generate` must run before `nest build`, not just before migrate/seed.** Under
+   Prisma 7 the generator emits TypeScript into `apps/api/src/generated/prisma`, so the client
+   is _build input_: generate after the build and it is simply absent from `dist`. It is
+   gitignored, so a fresh checkout has none — every CI job that compiles or type-checks runs
+   `npx prisma generate` first, `lint` included (linting is type-aware). The `--schema` flag
+   is gone; the root `prisma.config.ts` carries the path.
 
 5. **Changing a base image or a dependency? `docker compose ... down -v` first.** The
    `*_node_modules` volumes persist the old dependency tree and native binaries built for
@@ -243,13 +249,25 @@ Each of these was a real production-blocking bug. They're fixed; keep them fixed
 
 8. **`prisma` is a runtime `dependency`, not a devDependency.** The container's `CMD` runs
    `npx prisma migrate deploy`, and the runtime image is a production-only install
-   (ADR-0011). Demote it and `npx` will try to fetch Prisma from the network at boot.
+   (ADR-0011). Demote it and `npx` will try to fetch Prisma from the network at boot. This
+   was nearly re-broken during the Prisma 7 upgrade; the check that catches it is
+   `docker run --entrypoint sh <image> -c "npx --offline prisma migrate deploy"`, not any
+   test.
 
-9. **npm ignores a new `overrides` entry while `node_modules` exists.** It resolves
-   against the hidden lockfile in `node_modules` and reports "up to date" — `--force`,
-   `--package-lock-only`, and even deleting `package-lock.json` all leave the old version
-   pinned. Regenerate the lockfile from a copy of the manifests with **no `node_modules`
-   present**, then `npm ci`. Use npm 11+ to do it: npm 10 drops the `libc` fields that
+9. **npm ignores a new `overrides` entry unless BOTH `node_modules` and
+   `package-lock.json` are absent.** It resolves against whichever pin it can still see —
+   the hidden lockfile inside `node_modules`, or the committed `package-lock.json` — and
+   reports "up to date"; `--force` and `--package-lock-only` do not help.
+
+   **Both, not either.** Confirmed the hard way during the Prisma 7 upgrade: regenerating in
+   a clean directory containing the manifests _and a copy of the lockfile_ still produced the
+   old version, and `npm ls` then reported `invalid: mysql2@3.15.3` — npm knew the override
+   was violated and did not act on it. Copying **only the `package.json` files** into an empty
+   directory and running `npm install --package-lock-only` there produced the right tree
+   immediately.
+
+   So: copy the manifests alone into a scratch directory, regenerate the lockfile, copy it
+   back, then `npm ci`. Use npm 11+ to do it: npm 10 drops the `libc` fields that
    optional-dependency selection needs on musl vs glibc.
 
 10. **Vite HMR does not fire through the Windows bind mount.** Docker Desktop on Windows

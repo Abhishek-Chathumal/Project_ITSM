@@ -9,11 +9,11 @@
  *
  * It writes and then removes its own fixtures, so it is safe to re-run.
  */
-import { PrismaClient } from '@prisma/client';
+import { createSeedClient } from './seed-client';
 import { IMPACTS, PRIORITIES, TICKET_SOURCES, TICKET_TYPES, URGENCIES } from '@itsm/shared';
 import { buildPath, depthOf, isAtOrBeneath } from '../src/common/tree/materialized-path';
 
-const prisma = new PrismaClient();
+const prisma = createSeedClient();
 
 let failures = 0;
 function check(label: string, condition: boolean, detail = ''): void {

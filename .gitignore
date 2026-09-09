@@ -4,6 +4,11 @@ build/
 .turbo/
 *.tsbuildinfo
 
+# Prisma 7 generates the client into the source tree (the generator's `output` is
+# mandatory and no longer points at node_modules). It is build output, not source:
+# `npx prisma generate` recreates it, and CI does exactly that before every build.
+apps/api/src/generated/
+
 # env
 # Ignore every .env variant, then re-admit the committed template. The wildcard matters:
 # `.env` and `.env.local` alone leave `.env.bak`, `.env.save`, `.env.prod` and whatever an

@@ -31,27 +31,42 @@ RUN npm ci --omit=dev
 FROM deps AS build
 COPY . .
 RUN npm run build -w @itsm/shared
-RUN npx prisma generate --schema apps/api/prisma/schema.prisma
+# This ordering is load-bearing under Prisma 7, in a way it was not under 6. The generator
+# now emits TypeScript into `apps/api/src/generated/prisma`, so it is *build input*: run it
+# after `nest build` and the client is simply absent from `dist`. No `--schema` flag — the
+# root `prisma.config.ts` carries the path.
+RUN npx prisma generate
 RUN npm run build -w @itsm/api
 
 FROM base AS runtime
 ENV NODE_ENV=production
 COPY --from=prod-deps /repo/node_modules ./node_modules
-# The generated Prisma client lives outside the dependency tree, so it comes from `build`
-# and must be overlaid *after* node_modules or the copy above clobbers it.
-COPY --from=build /repo/node_modules/.prisma ./node_modules/.prisma
+# No `.prisma` overlay here any more. Under Prisma 6 the generated client lived at
+# `node_modules/.prisma` and had to be copied from `build` and layered *after* node_modules.
+# Prisma 7's generator writes TypeScript into `apps/api/src/generated/prisma` instead, so it
+# is compiled by `nest build` like any other source and arrives inside the `dist` copy
+# below. The old COPY would silently copy nothing — and a missing client fails at boot, not
+# at build, which only `smoke` would have caught.
 COPY --from=build /repo/packages/shared/dist ./packages/shared/dist
 COPY --from=build /repo/packages/shared/package.json ./packages/shared/package.json
 COPY --from=build /repo/apps/api/dist ./apps/api/dist
 COPY --from=build /repo/apps/api/package.json ./apps/api/package.json
 COPY --from=build /repo/apps/api/prisma ./apps/api/prisma
+# The CMD's `prisma migrate deploy` runs with no `--schema` flag and no `datasource.url`
+# (Prisma 7 rejects that field), so it needs the root config to find both. It is resolved
+# explicitly via PRISMA_CONFIG below rather than by discovery, because the working directory
+# is `/repo/apps/api` and the config sits a level above it.
+COPY --from=build /repo/prisma.config.ts ./prisma.config.ts
 
 WORKDIR /repo/apps/api
 EXPOSE 3000
 # `migrate deploy`, never `db seed`. This image carries `prisma/` but deliberately not
-# `src/`, and the seed imports the shared tree helper from `../src/common/tree` (one
-# materialized-path implementation, per Functional Reference B4). So adding `db seed` here
-# fails at *boot*, not build — the failure mode ADR-0011 and the smoke jobs exist to catch.
-# Seeding runs where the full tree is present: CI's `test` job, and the dev stack, which
-# bind-mounts the repo.
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
+# `src/`, and the seed imports both the shared tree helper (`../src/common/tree`, one
+# materialized-path implementation per Functional Reference B4) and, since Prisma 7, the
+# generated client itself (`../src/generated/prisma`). So adding `db seed` here fails at
+# *boot*, not build — the failure mode ADR-0011 and the smoke jobs exist to catch. Seeding
+# runs where the full tree is present: CI's `test` job, and the dev stack, which bind-mounts
+# the repo. Prisma 7 no longer seeds implicitly on `migrate`, so this is now the only path.
+#
+# `--schema` is gone from every CLI call: the root `prisma.config.ts` points at the schema.
+CMD ["sh", "-c", "npx prisma --config /repo/prisma.config.ts migrate deploy && node dist/main.js"]

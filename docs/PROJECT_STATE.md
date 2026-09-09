@@ -527,6 +527,69 @@ schema cannot prevent it; only the helper can), and **type conversion** is desig
 built, because mapping a status onto the target type's workflow needs Slice 4's transition
 rules to exist first.
 
+### Prisma 6.19.3 -> 7.10.0 (2026-09-09)
+
+The change §4 had been queued as "an architecture change, not a bump". It was, and the two
+surprises were in opposite directions.
+
+**Driver adapters are mandatory in Prisma 7**, for every database — the Rust query engine is
+gone. So `PrismaService` was rewritten around `@prisma/adapter-pg`, not merely re-imported,
+and `datasource.url` is now rejected outright inside `schema.prisma`. The connection string
+reaches the CLI through the new root `prisma.config.ts` and the client through the adapter.
+Both still read `DATABASE_URL`.
+
+**The predicted `applyScope()` cost was overstated.** §4 said the helper "would have to be
+rewritten against driver adapters"; adapters change how the client is constructed, not how a
+where-clause helper composes filters. Doing Prisma 7 before Slice 0c is still right, but for
+the narrower reason in ADR-0019: porting that one file means re-verifying every filter it
+builds, and a careless port there is a silent data leak.
+
+**The predicted Dockerfile landmine was real, and got deleted rather than fixed.** The Prisma
+7 generator emits _TypeScript_ into `apps/api/src/generated/prisma`, so putting the output
+under `src/` makes the client ordinary build input: `nest build` compiles it into `dist`, and
+the runtime image gets it from the `dist` copy it already did. `COPY --from=build
+/repo/node_modules/.prisma` is gone. The new ordering rule that replaces it: **`prisma
+generate` must run before `nest build`**, not merely before the app starts.
+
+**Four things only came out of running it:**
+
+- **`env('DATABASE_URL')` in `prisma.config.ts` breaks `prisma generate`.** Prisma's helper
+  throws while the config is _loading_, and generate needs no database — so it failed the
+  Docker build, where there are deliberately no credentials. Reading `process.env` directly
+  fixes it without baking a fake connection string into an image layer.
+- **`.env` stopped being loaded for standalone scripts.** Prisma 6's client loaded it
+  implicitly via `datasource.url`; nothing does now. `prisma/seed-client.ts` loads it
+  explicitly, resolved from the file's own location rather than the working directory — bare
+  `dotenv/config` reads `./.env` and finds nothing when a script runs from `apps/api`.
+- **Seeding is no longer implicit.** Prisma 6 seeded as part of `migrate dev`/`reset`; 7 does
+  not. Every path that needs seed data now calls `prisma db seed` itself.
+- **The `lint` job needed `prisma generate` added.** Nothing lints the generated client, but
+  linting is type-aware (`parserOptions.project`) and the client is gitignored, so a fresh
+  checkout would lint with degraded types behind every Prisma-touching rule.
+
+**A near-miss worth recording, because it is gotcha 8 exactly.** `prisma` was briefly moved to
+`devDependencies` during this work. The runtime image installs `--omit=dev` and its CMD runs
+`npx prisma migrate deploy`, so that would have made production boot depend on the npm
+registry being reachable. Caught by inspecting the built image rather than by any test. It is
+back in `dependencies`, and `npx --offline prisma migrate deploy` now succeeds inside the
+image — which is the check that actually proves it.
+
+**Measured, not estimated:** the API image goes 781 MB -> 894 MB. While measuring it, two
+things about §4's numbers turned out to be wrong — the recorded 537 MB was stale (`main` was
+already 781 MB), and `prod-deps`' `--omit=dev` is not omitting root devDependencies at all, so
+`typescript` and `@turbo` ship to production on `main` too. That second one is a real,
+pre-existing defect against ADR-0011 and is logged in §4 rather than fixed here.
+
+**Verified end to end from an empty database:** migrations apply, seed runs, all 30 checks in
+`verify-slice-2b.ts` pass through the adapter, the production stack serves `/health`, csrf and
+the frontend, the dev stack seeds and proxies `/api` through Vite, and a login round-trip
+returns identical shapes from `/auth/login` and `/auth/me`.
+
+**ADR-0009 is superseded in its reasoning only.** No Rust query engine means the OpenSSL/musl
+problem that pinned Debian is gone, and `binaryTargets` is removed. Alpine is now plausible
+and deliberately untested: the Prisma CLI still ships in the runtime image and its schema
+engine is a separate question. That is a follow-up with its own ADR.
+
 ### The spec was revised, and Phase 0 re-opened (2026-09-09)
 
 Two documents arrived: a rewritten constitution and a new companion, the **Functional
@@ -600,46 +663,35 @@ locally rather than by any unit test.
   the config spec (added with ADR-0015), and one component render test. The constitution
   (Part XIII) asks for integration tests incl. RBAC enforcement and E2E journeys.
   **Still the largest gap.**
-- **`Prisma 6.19.3` — 7.10.0 is the next step, and it is an architecture change, not a
-  bump.** Prisma 7 replaces the Rust engines with driver adapters, deprecates
-  `prisma-client-js` for a Rust-free `prisma-client` generator whose `output` is required
-  (so the client no longer lands in `node_modules`), and requires a root `prisma.config.ts`
-  with seeding moved onto it. Prisma 6 already warns about the last one on every CLI run:
-  _"The configuration property `package.json#prisma` is deprecated and will be removed in
-  Prisma 7."_
+- ~~**`Prisma 6.19.3` — 7.10.0 is the next step**~~ — **done 2026-09-09, see ADR-0019.**
+  Pinned to exactly `7.10.0` on both packages. The prediction in this entry was right that it
+  is an architecture change; two details differed in practice:
 
-  Two consequences worth knowing before starting. `api.Dockerfile`'s
-  `COPY --from=build /repo/node_modules/.prisma` copies **nothing** once the client
-  generates elsewhere — and that fails at _boot_, not build, so only `smoke` catches it.
-  And **ADR-0009 would need superseding**: its whole premise is the Rust engine
-  mis-detecting OpenSSL on musl, which stops applying when there is no Rust engine — so
-  Debian-over-Alpine may no longer be required, which could take a large bite out of the
-  540 MB API image.
+  - **Driver adapters are mandatory**, not optional, so `PrismaService` was rewritten around
+    `@prisma/adapter-pg` rather than merely re-imported.
+  - **This entry's claim that `applyScope()` "would have to be rewritten against driver
+    adapters" was an overstatement.** Adapters change how the client is _constructed_, not how
+    a where-clause helper composes filters; the real cost would have been import paths. The
+    ordering decision it justified still stands, for the narrower reason in ADR-0019.
 
-  **Do not install `prisma@latest`.** Checked 2026-09-09: that tag is `8.0.0-rc.13`, a
-  release candidate, while `@prisma/client` has no 8.x published at all
-  (`@prisma/client@8.0.0-rc.13` is a 404). Installing "latest" pairs an RC CLI with a
-  7.10.0 client, which Prisma requires to match. Pin `7.10.0`.
+  The `COPY --from=build /repo/node_modules/.prisma` hazard predicted here was real and is now
+  **deleted rather than repointed**: the Prisma 7 generator emits TypeScript into
+  `apps/api/src/generated/prisma`, so the client is ordinary build input and arrives in the
+  runtime image inside the existing `dist` copy.
 
-- ~~**`.env`'s `DATABASE_URL` password does not match `POSTGRES_PASSWORD`**~~ — **fixed
-  2026-09-09.** Postgres only applies `POSTGRES_PASSWORD` at `initdb`, so the drift was
-  invisible while an old volume survived and became `P1000: Authentication failed` the moment
-  the volume was recreated — which the standing advice to `down -v` after a dependency change
-  guarantees will happen. It cost a detour in the Slice 2b session before being spotted.
+- **The API image is ~894 MB, and two things about that are worth knowing.**
+  The figure previously recorded here (537 MB, from ADR-0011) was stale: `main` measured
+  **781 MB** before the Prisma 7 work. Prisma 7 adds ~113 MB on top (`effect` 34 MB,
+  `@electric-sql` 26 MB, against the Rust engines it drops). Both numbers are measured by
+  building the images, not estimated.
 
-  `DATABASE_URL` in the local `.env` now derives from `POSTGRES_USER`/`POSTGRES_PASSWORD`/
-  `POSTGRES_DB`, verified by `prisma migrate status` running with no override. No credential
-  was rotated — the client string was simply made to match the password the server already
-  had. Previous file kept as `.env.bak-slice2b`. `.env.example` was already consistent
-  (`change-me` in both lines), so nothing committed needed changing.
-
-- **The dev `api` container will start itself and run the seed while you are mid-migration.**
-  Observed in the Slice 2b session: `docker compose ... up -d postgres redis` brought `api`
-  and `web` up too, `api`'s `CMD` ran `prisma migrate deploy && prisma db seed` against a
-  schema that did not yet have the columns the new seed writes, and it died in a restart loop
-  that took Postgres down with it. Use `--no-deps` when bringing up only the backing services
-  for schema work: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
---no-deps postgres redis`.
+- **`prod-deps`' `npm ci --omit=dev` is not omitting root devDependencies, so ADR-0011's goal
+  is not currently met.** `typescript` (23 MB) and `@turbo` are present in the runtime image
+  on `main` as well as on the Prisma 7 branch — build tooling is shipping to production, which
+  is exactly what that ADR's `prod-deps` stage exists to prevent. Found while measuring the
+  image for ADR-0019; **not fixed there**, because it is orthogonal to Prisma and fixing it
+  inside that change would have widened it. Worth doing: it is likely the largest single
+  saving available in the image, and it is a supply-chain reduction as much as a size one.
 
 - **Middleware-level rejections carry no `requestId`** in the response body, because
   `nestjs-pino` assigns `req.id` after the CSRF middleware has already rejected. Nest-level
@@ -873,8 +925,10 @@ exactly the kind of thing that survives review and shows up as latency months la
 
 ### The other open decision
 
-**Prisma 7 versus starting the Phase 0 access-control work.** §4 records what 7 involves.
-**Decided: Prisma 7 next, before Phase 0's Slices 0a–0d.**
+**Prisma 7 versus starting the Phase 0 access-control work.** ✅ **Closed — Prisma 7 is done
+(ADR-0019).** Phase 0 Slices 0a–0d are next, and `applyScope()` will be written once, against
+final tooling. The reasoning is kept below because one part of it was wrong and the correction
+matters.
 
 One correction to the reasoning this section previously carried. It claimed `applyScope()`
 "would have to be rewritten against driver adapters" — that overstates it. Driver adapters

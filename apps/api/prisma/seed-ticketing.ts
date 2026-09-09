@@ -11,7 +11,7 @@
  * that an admin can rename a status, reorder a category tree, or move from a 3x3 grid to a
  * 5x5 one without a migration or a code change.
  */
-import { PrismaClient, StatusCategory, DisplayTone } from '@prisma/client';
+import { PrismaClient, StatusCategory, DisplayTone } from '../src/generated/prisma/client';
 import {
   CLOSURE_CODES,
   IMPACTS,

@@ -16,6 +16,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build -w @itsm/shared
+      # Needed even though nothing lints the generated client itself (eslint ignores
+      # `src/generated`). Linting here is type-aware — `parserOptions.project` — and the
+      # Prisma 7 client is gitignored, so without this the type information behind every
+      # rule that touches a Prisma type silently degrades on a fresh checkout.
+      - run: npx prisma generate
       - run: npm run lint
       - run: npm run format:check
 
@@ -63,7 +68,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build -w @itsm/shared
-      - run: npx prisma generate --schema apps/api/prisma/schema.prisma
+      - run: npx prisma generate
       - run: npm run typecheck
 
   test:
@@ -107,12 +112,14 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build -w @itsm/shared
-      - run: npx prisma generate --schema apps/api/prisma/schema.prisma
+      - run: npx prisma generate
       - name: Apply migrations
-        run: npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
+        run: npx prisma migrate deploy
+      # Prisma 7 no longer seeds implicitly as part of `migrate`, and the schema path plus
+      # the connection URL both come from the root prisma.config.ts — so this runs from the
+      # repo root with no flags rather than from apps/api with --schema.
       - name: Seed database
         run: npx prisma db seed
-        working-directory: apps/api
       - name: API tests
         run: npm run test -w @itsm/api
       - name: Web tests
@@ -128,7 +135,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build -w @itsm/shared
-      - run: npx prisma generate --schema apps/api/prisma/schema.prisma
+      - run: npx prisma generate
       - run: npm run build
       - name: Build API image
         run: docker build -f infra/docker/api.Dockerfile -t itsm-api:ci .

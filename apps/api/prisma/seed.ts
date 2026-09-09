@@ -1,10 +1,10 @@
-import { PrismaClient } from '@prisma/client';
+import { createSeedClient } from './seed-client';
 import * as argon2 from 'argon2';
 import { DEFAULT_ROLES, PERMISSIONS } from '@itsm/shared';
 import { seedTicketing } from './seed-ticketing';
 import { buildPath } from '../src/common/tree/materialized-path';
 
-const prisma = new PrismaClient();
+const prisma = createSeedClient();
 
 const PERMISSION_CATALOG: Array<{ key: string; description: string }> = [
   { key: PERMISSIONS.ROLE_MANAGE, description: 'Create, edit, delete roles and their permissions' },

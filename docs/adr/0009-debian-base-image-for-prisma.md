@@ -1,5 +1,16 @@
 # ADR-0009: Debian base image for the API container (Prisma engine compatibility)
 
+> ⚠️ **The premise below no longer holds, but the decision still stands.** This ADR pins a
+> Debian base because Prisma's **Rust engine** mis-detects OpenSSL on musl. Prisma 7
+> ([ADR-0019](0019-prisma-7-driver-adapters.md)) removed the Rust _query_ engine entirely —
+> the built image contains no `libquery_engine*` and no `node_modules/.prisma`, and
+> `binaryTargets` is gone from `schema.prisma`.
+>
+> Alpine is therefore _plausible_ now, and deliberately untested. The Prisma **CLI** still
+> ships in the runtime image (the CMD runs `migrate deploy`) and its schema engine is a
+> separate question from the query engine. Changing the base image is its own change, with
+> its own verification and its own ADR superseding this one. Until then: `node:24-bookworm-slim`.
+
 **Status:** Accepted
 **Relates to:** Constitution Part VI (Architecture), Part X (Technology Stack), Article VIII
 
