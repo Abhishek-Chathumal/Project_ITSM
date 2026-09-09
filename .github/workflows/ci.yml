@@ -19,6 +19,40 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
 
+  # Veracode SCA (security-scan.yml) installs with --omit=dev, so it only ever sees the
+  # production tree — 184 libraries against 941 in the full tree when that was measured
+  # (PROJECT_STATE.md §4). The vite/vitest/esbuild advisories cleared in the dependency
+  # pass lived entirely in the dev-only remainder and would not have been caught. This
+  # job is what covers it, and the two are complements rather than substitutes.
+  #
+  # It needs no `npm ci`: npm resolves advisories from package-lock.json alone.
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      # Runs first and never fails, so the artifact exists even when the gate below is
+      # red. A finding that only ever appears in a job log cannot be reviewed later
+      # (constitution Part XIII) — the same reasoning as security-scan.yml's
+      # `sast-findings`. `npm audit` exits non-zero whenever anything is reported, which
+      # is why this step swallows its status; the gate step is what decides the build.
+      - name: Collect the full advisory report (every severity)
+        run: npm audit --json > npm-audit.json || true
+      - name: Publish the report
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: npm-audit
+          path: npm-audit.json
+          retention-days: 30
+          if-no-files-found: warn
+      # Gates on high and above, matching sast-pipeline's threshold. Moderate and below
+      # are in the artifact above rather than blocking a PR — a gate that fires on
+      # everything stops being read.
+      - name: Fail on high and critical advisories
+        run: npm audit --audit-level=high
+
   typecheck:
     runs-on: ubuntu-latest
     steps:

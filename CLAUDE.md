@@ -104,8 +104,9 @@ are admin-editable data, not hardcoded switches.
 npm run lint && npm run typecheck && npm run test && npm run build && npm run format:check
 ```
 
-CI runs these plus `build` (Docker images), `smoke` (prod stack over HTTP) and
-`smoke-dev` (dev stack, incl. the Vite→API proxy). All must be green.
+CI runs these plus `audit` (`npm audit` over the full dependency tree, gating on high and
+above), `build` (Docker images), `smoke` (prod stack over HTTP) and `smoke-dev` (dev stack,
+incl. the Vite→API proxy). All must be green.
 
 A separate `security-scan.yml` runs Veracode SAST (pipeline scan on PRs, blocking on High
 and above; full policy scan on `main` and weekly) and SCA — see ADR-0014. Every job is
@@ -183,11 +184,18 @@ Each of these was a real production-blocking bug. They're fixed; keep them fixed
    `npx prisma migrate deploy`, and the runtime image is a production-only install
    (ADR-0011). Demote it and `npx` will try to fetch Prisma from the network at boot.
 
-9. **Vite HMR does not fire through the Windows bind mount.** Docker Desktop on Windows
-   doesn't propagate inotify events into the container, so edits on the host do not
-   trigger a rebuild — and a browser reload still serves Vite's cached module graph.
-   `docker compose ... restart web` picks the changes up. Don't conclude a change "didn't
-   work" from a stale dev server.
+9. **npm ignores a new `overrides` entry while `node_modules` exists.** It resolves
+   against the hidden lockfile in `node_modules` and reports "up to date" — `--force`,
+   `--package-lock-only`, and even deleting `package-lock.json` all leave the old version
+   pinned. Regenerate the lockfile from a copy of the manifests with **no `node_modules`
+   present**, then `npm ci`. Use npm 11+ to do it: npm 10 drops the `libc` fields that
+   optional-dependency selection needs on musl vs glibc.
+
+10. **Vite HMR does not fire through the Windows bind mount.** Docker Desktop on Windows
+    doesn't propagate inotify events into the container, so edits on the host do not
+    trigger a rebuild — and a browser reload still serves Vite's cached module graph.
+    `docker compose ... restart web` picks the changes up. Don't conclude a change "didn't
+    work" from a stale dev server.
 
 ## Working style that fits this project
 

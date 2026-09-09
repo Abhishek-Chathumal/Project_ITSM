@@ -65,26 +65,25 @@ the narrative.
 **Goal:** a person can raise a ticket, a technician can work it to resolution, and both can
 see it. This is the phase that makes the product real.
 
-### Slice 1 — Dependency & security triage ✅ MOSTLY DONE
+### Slice 1 — Dependency & security triage ✅ DONE
 
-**Do not start here — most of this is finished.** The ~31 advisories (1 critical, 9 high)
+**Nothing to start here.** The ~31 advisories (1 critical, 9 high)
 that this slice was written against are **now 0**, via Node 20→22, NestJS 10→11, vite 5→8,
 vitest 2→5 and react-router-dom 6→7. `npm audit` and `npm audit --omit=dev` are both clean.
 Automated scanning went in alongside it: Veracode SAST + SCA and GitGuardian, per ADR-0014.
 See PROJECT_STATE §3 ("The dependency & security pass", "Making the scanners tell the
 truth") for what was done and what it cost.
 
-**What is still open from this slice** — small, and safe to do at any point rather than
-blocking Slice 2:
+The CI audit step that closed this slice is now in `ci.yml` as the `audit` job: full-tree
+`npm audit`, gating on high and above, publishing the whole report as an artifact. It found
+six highs on its first run — all from `multer <= 2.2.0` via `@nestjs/platform-express`,
+fixed with a root `overrides` pin. PROJECT_STATE §3 has the detail, including why npm
+appeared to ignore that override.
 
-- **No `npm audit` job in CI.** Veracode SCA does not substitute: it installs `--omit=dev`
-  and so scans 184 of 941 libraries. The dev-only advisories fixed above would not have been
-  caught. PROJECT_STATE §4 has the measurement.
-- **`sast-policy` is red on `main` by a documented disposition** (one dismissed Medium,
-  ADR-0015). Clearing it needs a mitigation approved in the Veracode platform by a human.
-
-**Done when:** the CI audit step exists, or is explicitly declined in `PROJECT_STATE.md` §4
-with a reason.
+**One item remains open and is not ours to close:** `sast-policy` is red on `main` by a
+documented disposition (one dismissed Medium, ADR-0015). Clearing it needs a mitigation
+approved in the Veracode platform by a human with the approver role. It blocks nothing —
+PRs are gated by `sast-pipeline`, which passes.
 
 ### Slice 2 — Ticket data model
 
