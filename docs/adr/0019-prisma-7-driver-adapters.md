@@ -151,5 +151,25 @@ properly.
   stack boots and serves `/health`, `/api/v1/auth/csrf` and the frontend, and the dev stack
   seeds and proxies `/api` through Vite. A login round-trip returns identical shapes from
   `/auth/login` and `/auth/me` (Article V).
+- **Prisma 7 drags in a vulnerable `mysql2`, pinned up by a root `override`.**
+  `prisma@7.10.0` depends on `mysql2 <=3.23.0`, which carries a **high** advisory
+  (GHSA-3f6p-5ww8-9rcr — an auth-plugin downgrade to `mysql_clear_password` that leaks
+  plaintext credentials) plus a moderate decompression-bomb DoS. CI's `audit` job gates on
+  high-and-above and failed on it; npm's only suggested remedy was downgrading Prisma back
+  to 6.
+
+  `mysql2` reaches the tree solely through the Prisma CLI's MySQL connector and is never
+  loaded — this project is PostgreSQL-only — so the practical exposure is nil. That is a
+  reason to fix it cheaply, not a reason to suppress it: `overrides.mysql2: ^3.24.4` pins a
+  patched version, and `npm audit` is clean at every severity afterwards. Weakening the gate
+  was never on the table.
+
+- **Gotcha 9 turned out to be stated too weakly, and is now corrected in `CLAUDE.md`.**
+  Applying that override showed npm ignores a new `overrides` entry unless **both**
+  `node_modules` _and_ `package-lock.json` are absent — not `node_modules` alone. A scratch
+  directory holding the manifests plus a copy of the lockfile still resolved the old version,
+  with `npm ls` reporting `invalid: mysql2@3.15.3`: npm knew the override was violated and
+  did not act on it. Manifests alone worked first time.
+
 - **`applyScope()` (Phase 0 Slice 0c) can now be written once, against final tooling** — which
   was the point of sequencing this before it.

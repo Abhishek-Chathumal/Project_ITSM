@@ -254,11 +254,20 @@ Each of these was a real production-blocking bug. They're fixed; keep them fixed
    `docker run --entrypoint sh <image> -c "npx --offline prisma migrate deploy"`, not any
    test.
 
-9. **npm ignores a new `overrides` entry while `node_modules` exists.** It resolves
-   against the hidden lockfile in `node_modules` and reports "up to date" — `--force`,
-   `--package-lock-only`, and even deleting `package-lock.json` all leave the old version
-   pinned. Regenerate the lockfile from a copy of the manifests with **no `node_modules`
-   present**, then `npm ci`. Use npm 11+ to do it: npm 10 drops the `libc` fields that
+9. **npm ignores a new `overrides` entry unless BOTH `node_modules` and
+   `package-lock.json` are absent.** It resolves against whichever pin it can still see —
+   the hidden lockfile inside `node_modules`, or the committed `package-lock.json` — and
+   reports "up to date"; `--force` and `--package-lock-only` do not help.
+
+   **Both, not either.** Confirmed the hard way during the Prisma 7 upgrade: regenerating in
+   a clean directory containing the manifests _and a copy of the lockfile_ still produced the
+   old version, and `npm ls` then reported `invalid: mysql2@3.15.3` — npm knew the override
+   was violated and did not act on it. Copying **only the `package.json` files** into an empty
+   directory and running `npm install --package-lock-only` there produced the right tree
+   immediately.
+
+   So: copy the manifests alone into a scratch directory, regenerate the lockfile, copy it
+   back, then `npm ci`. Use npm 11+ to do it: npm 10 drops the `libc` fields that
    optional-dependency selection needs on musl vs glibc.
 
 10. **Vite HMR does not fire through the Windows bind mount.** Docker Desktop on Windows
