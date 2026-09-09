@@ -5,7 +5,10 @@ constitution's Part XII roadmap; **the constitution remains the source of truth*
 document sequences it, it does not replace it.
 
 Companion docs: [`PROJECT_STATE.md`](PROJECT_STATE.md) (what exists right now),
-[`WORKFLOW.md`](WORKFLOW.md) (how to work), [`adr/`](adr/) (why).
+[`WORKFLOW.md`](WORKFLOW.md) (how to work), [`adr/`](adr/) (why), and
+[`Support_Portal_Functional_Reference.md`](Support_Portal_Functional_Reference.md) — the
+constitution's companion, which specifies behaviour at field/rule/algorithm level and whose
+**Part Q amends the constitution** (six amendments in force; see ADR-0017).
 
 ---
 
@@ -28,9 +31,13 @@ These are not optional and apply without being restated:
 1. **Security first.** New public endpoint → rate limit it. New capability → a permission
    key guarding it, server-side. New user input → validated. New secret → env var, never
    committed. Before any hosting milestone, run a dependency audit.
-2. **Authorization uses the existing mechanism.** `@RequirePermission(...)` +
-   `PermissionGuard`. New capabilities are new seeded `Permission` rows — never new guard
-   logic, never a hardcoded role check.
+2. **Authorization uses the existing mechanism, and scope goes through `applyScope()`.**
+   `@RequirePermission(...)` + `PermissionGuard` answers "does the caller hold this key?".
+   Since Amendment A-001 that is only half the decision: every permission also carries a
+   **scope**, and scope is enforced **in the data layer, once**, never per endpoint — "the
+   miss is a data leak, not a visible bug" (constitution 5.2). New capabilities are new
+   seeded `Permission` rows from the manifest, never new guard logic, never a hardcoded role
+   check, and never a hand-rolled scope filter in a service.
 3. **Audit every state change** via `AuditService.record(...)`. Append-only, always.
 4. **One DTO shape per concept**, shared from `packages/shared`.
 5. **An ADR for every architectural decision or deviation** (constitution Part XIV).
@@ -44,10 +51,35 @@ These are not optional and apply without being restated:
 
 ---
 
-## Phase 0 — Foundation ✅ COMPLETE
+## Phase 0 — Foundation ⚠️ RE-OPENED by Amendment A-001
 
 Repo scaffold, CI/CD, Docker Compose, migrations, local auth, RBAC skeleton, audit log.
 Merged in PRs #1–#5. Details in [`PROJECT_STATE.md`](PROJECT_STATE.md) §2.
+
+**All of that stands. The bar moved.** A-001 rephased Part XII to pull the access-control
+foundations into Phase 0, because retrofitting scope enforcement onto built modules means
+auditing every query in the system. Still outstanding, in dependency order (ADR-0017 has the
+gap table, PROJECT_STATE §4b the detail):
+
+- **Slice 0a — the permission manifest.** A versioned file in the repo seeding the ~150-entry
+  catalogue (Ref I2, `module.action[.qualifier]`), replacing the ten hand-maintained keys in
+  `seed.ts`. Reconciled on each release migration; new permissions seed
+  **disabled-by-default for existing custom roles** so an upgrade never silently widens
+  access (7.3.5).
+- **Slice 0b — the access-control schema.** `Permission.module`/`is_sensitive`;
+  `PermissionSet` + `PermissionSetItem` + `RolePermissionSet`;
+  `RolePermission.scope`/`scope_depth`/`custom_scope_id`; **`UserRole`** (a user may hold
+  several roles — today's single `User.roleId` FK goes); `User.manager_id` +
+  `reporting_path`, with a **cycle check on every assignment** and subtree recomputation on
+  move.
+- **Slice 0c — `applyScope(query, user, permission)`.** One helper, the only place that knows
+  what `department` means. Unit-tested per scope kind, including the null-department case.
+- **Slice 0d — the twelve seeded default roles**, permission-locked (membership editable,
+  permission set not), plus the privilege safety rules from 5.3a / Ref I8 as acceptance
+  criteria rather than follow-ups.
+
+**Done when:** a Requester and a Technician resolve to different row sets _through
+`applyScope()`_ on the same query, proven by a test.
 
 Merged since, all of it groundwork rather than Phase 1 feature work: this plan itself (#6),
 the dependency pass and the UI shell and primitive layer (#7, ADR-0013), security scanning
@@ -105,21 +137,37 @@ PROJECT_STATE §3 has the detail.
 **Not in this slice, by design:** transition rules (Slice 4), attachments (Slice 5), and the
 new permission keys (Slice 3 — they belong with the routes they guard).
 
-### Slice 3 — Ticket API + RBAC
+### Slice 3 — Request API + scoped authorization
 
-CRUD + list/filter endpoints under `/api/v1/tickets`, each guarded by a permission key.
+> **Rewritten by Amendment A-001, and now depends on Phase 0's Slices 0a–0c.** The earlier
+> version of this slice listed `ticket.view.own` / `.team` / `.all` as separate keys. Those
+> collapse into **one** permission carrying a scope. Do not start this before `applyScope()`
+> exists — the whole point of A-001's phasing is that scope is not retrofitted.
 
-New permission keys (extending the pattern in `packages/shared/src/permissions.ts`;
-`ticket.view.own` and `ticket.edit.assigned` already exist as forward declarations):
-`ticket.create`, `ticket.view.team`, `ticket.view.all`, `ticket.edit.team`,
-`ticket.assign`, `ticket.comment.internal`, `ticket.delete`.
+CRUD + list/filter endpoints under `/api/v1/requests`, each guarded by a permission key from
+the manifest and each **reading through `applyScope()`**.
 
-Scoping matters here: "view team" must actually resolve to _the caller's_ team
-(constitution §5.3 — ABAC narrowing on top of RBAC). Don't let a team-scoped permission
-leak the whole table.
+Permissions come from **Functional Reference I2.1**, not invented here — `request.view`,
+`request.create`, `request.create.on_behalf`, `request.edit`, `request.edit.description`,
+`request.assign` / `.self` / `.other`, `request.transition`, `request.resolve`,
+`request.close`, `request.reopen`, `request.note.internal`,
+`request.note.view_internal` (seeing internal notes is deliberately distinct from adding
+them), `request.priority.override`, `request.delete`, `request.export`. Each is assigned a
+scope separately; none of them encodes a scope in its name.
 
-**Done when:** a Requester sees only their own tickets, a Technician sees their team's, and
-this is proven by an integration test — not just by inspection.
+**Two traps worth naming, because both fail silently rather than loudly:**
+
+- **A null-department user must not widen the query.** If a user's `departmentId` is `null`,
+  a `department`-scoped clause must contribute _nothing_ — never `{ teamId: null }`, which
+  Prisma renders as `team_id IS NULL` and matches every unassigned record. That is a data
+  leak with a green test suite unless the test covers it explicitly.
+- **`request.note.view_internal` is a field-level boundary, not a UI hint.** An internal note
+  must not reach a payload the requester can read, which means filtering in the query, not
+  in the component.
+
+**Done when:** a Requester sees only their own requests and a Technician only their group's —
+resolved **through `applyScope()`**, proven by an integration test against a real Postgres,
+including the null-department case.
 
 ### Slice 4 — Status transitions
 
@@ -165,16 +213,24 @@ RBAC enforcement, plus one E2E journey (raise → assign → resolve) in Playwri
 
 ### Phase 1 exit criteria
 
-- [ ] A Requester can raise a ticket and track it end to end in the browser
+- [ ] A Requester can raise a request and track it end to end in the browser
 - [ ] A Technician can pick it up, comment, and resolve it
-- [ ] RBAC scoping is proven by tests, not assumed
+- [ ] **Scope enforcement is live on every query** and runs through `applyScope()` — the
+      Part XII wording for Phase 1, and the reason A-001 pulled it into Phase 0
+- [ ] Scoping is proven by tests, not assumed — including the null-department case
 - [ ] Attachments work and are access-controlled
+- [ ] Internal notes never reach a payload the requester can read
 - [ ] Notifications fire and failures are visible
 - [ ] Both smoke jobs green; `PROJECT_STATE.md` updated
 
 ---
 
 ## Phase 2 — Asset/CMDB, SLA, Knowledge, Catalog, CSAT
+
+> **Read Functional Reference Part D before starting the SLA engine.** D3 specifies the
+> calculation exactly and D3a gives two worked examples that must be replicated as tests —
+> this is the piece most likely to be subtly wrong, and the constitution already singles it
+> out for unit testing (Part XIII).
 
 **Constitution:** §2.5, §2.6, §2.7, §2.2 (catalog), §2.11
 
@@ -194,7 +250,15 @@ returns sensible results; a catalog request produces a ticket with its form data
 
 ---
 
-## Phase 3 — Automation, custom fields, reporting, approvals, SSO/MFA
+## Phase 3 — Automation, custom fields, reporting, approvals, SSO/MFA, permission overrides
+
+> **Amended.** A-002 requires automation **observability to ship with the engine, not after
+> it** — execution logs, per-workflow health, admin failure alerting, auto-disable after
+> repeated failure, dry-run test mode, and cascade-depth loop protection (Ref E9). An
+> automation engine without those is unsafe to enable in production, so they are not a later
+> slice. A-001 adds the rest of the access-control model here: **user-level grants and
+> revocations, `hierarchy` scope, custom scopes, the access-review report, and the permission
+> explain/simulate tools** (Ref I10, constitution §8.3).
 
 **Constitution:** Part III (customization), Part IV (automation engine), §3.5, §4.4, §5.1, §5.4
 
@@ -224,7 +288,8 @@ Emergency types, CAB approval, and the change calendar; inbound/outbound webhook
 email-to-ticket ingestion.
 
 **Security note:** inbound webhooks and an email ingress are externally reachable
-attack surface. Signed payloads (HMAC per §8.3), strict validation, rate limiting.
+attack surface. Signed payloads (HMAC per §8.4 — webhooks moved there when A-001 added the
+access-control API at §8.3), strict validation, rate limiting.
 
 ---
 
@@ -242,40 +307,45 @@ app; OpenSearch swap-in if Postgres FTS stops scaling; advanced compliance repor
 Raised in conversation, beyond the original constitution. Each needs an ADR when built,
 because the constitution assumed **admin-only user creation**.
 
-| Item                                          | Lands in                             | Notes                                                             |
-| --------------------------------------------- | ------------------------------------ | ----------------------------------------------------------------- |
-| Additional login options / login flow changes | Phase 3 (with SSO)                   | Or earlier if needed standalone                                   |
-| Self-service account creation                 | Phase 1–2                            | Reverses a deliberate Phase 0 decision → **ADR required**         |
-| Bulk user import                              | Phase 2                              | Pairs naturally with the CSV asset import                         |
-| Account activation & email verification       | With self-service creation           | Signed single-use tokens, same pattern as §4.4 approval links     |
-| Admin-defined custom permissions              | Phase 3 (with custom fields)         | ⚠️ **Design tension — see below**                                 |
-| Cloud hosting                                 | After Phase 2, once genuinely usable | Full security pass first: secrets management, TLS, backups, audit |
+| Item                                          | Lands in                                                                     | Notes                                                             |
+| --------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Additional login options / login flow changes | Phase 3 (with SSO)                                                           | Or earlier if needed standalone                                   |
+| Self-service account creation                 | Phase 1–2                                                                    | Reverses a deliberate Phase 0 decision → **ADR required**         |
+| Bulk user import                              | Phase 2                                                                      | Pairs naturally with the CSV asset import                         |
+| Account activation & email verification       | With self-service creation                                                   | Signed single-use tokens, same pattern as §4.4 approval links     |
+| Admin-defined custom permissions              | Phase 0 (catalogue + `applyScope()`) then Phase 3 (overrides, custom scopes) | ✅ **Resolved by A-001 — see below**                              |
+| Cloud hosting                                 | After Phase 2, once genuinely usable                                         | Full security pass first: secrets management, TLS, backups, audit |
 
-### The custom-permissions problem — read before attempting
+### The custom-permissions problem — ✅ resolved by Amendment A-001
 
-Permission keys are currently referenced **in code** (`@RequirePermission(PERMISSIONS.X)`).
-An admin can invent a new key, but nothing in the codebase reads it, so it gates nothing.
-Truly admin-defined permissions therefore can't work the way roles do.
+This section used to pose an open architectural question: permission keys are referenced in
+code, so an admin-invented key gates nothing, and three options were listed for squaring that
+with Article II. **A-001 answers it, and the answer is essentially options 1 and 3 together
+rather than a fourth idea:**
 
-Realistic options, to be weighed when we get there:
+- The catalogue is **fixed but comprehensive** (~150 entries, Ref I2) and seeded from a
+  versioned manifest — admins compose roles and permission sets freely from it, so the common
+  case needs no new keys at all.
+- What admins genuinely author is **not keys but scope**: per-user grants and revocations, and
+  named reusable **custom scopes** — attribute filters over records, including custom fields
+  ("Technician, but only where Location = Colombo and Category = Network"). Those are
+  evaluated at query time by `applyScope()`, which is exactly option 1 and is genuinely
+  enforceable.
+- Transition-level gating (Ref I2.9) covers the remaining case: individual status transitions
+  carry `allowed_permissions[]`, as first-class records rather than application logic.
 
-1. **Scope custom permissions to data, not routes** — e.g. per-category or per-department
-   visibility rules evaluated at query time. Admin-configurable and genuinely enforceable.
-2. **Custom permissions gate custom things** — admin-created fields, forms, and workflow
-   transitions, which are already data-driven.
-3. **Ship a richer fixed catalog** and let admins compose roles freely from it. Less
-   flexible, zero new machinery.
-
-Bring options to the maintainer rather than picking one unilaterally — this is an
-architectural decision, and Article II ("configuration over code") pulls against the
-practical limits of route-level guards.
+So there is nothing left to decide here. The work is Phase 3 (user overrides, custom scopes,
+hierarchy scope, the explain tool) except for the catalogue and `applyScope()`, which are
+Phase 0.
 
 ---
 
 ## Definition of done — any slice
 
 - [ ] Works when actually run, not just when tests pass
-- [ ] Permission-guarded server-side; scoping proven by a test
+- [ ] Permission-guarded server-side **and** scoped through `applyScope()` — never a
+      hand-rolled filter in a service; scoping proven by a test, including the
+      null-department case
 - [ ] State changes audited
 - [ ] Shared DTOs in `packages/shared`, one shape per concept
 - [ ] ADR written if an architectural decision was made

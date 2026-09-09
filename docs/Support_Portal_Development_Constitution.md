@@ -1,6 +1,6 @@
 # The In-House IT Support Portal — Development Constitution
 
-**Version:** 1.1
+**Version:** 1.0
 **Status:** Foundational specification — governs all development decisions
 **Framework Alignment:** ITIL 4
 **Reference Systems:** Motadata ServiceOps, ServiceNow, Jira Service Management
@@ -13,6 +13,21 @@
 This document is the single source of truth for the design, build, and evolution of the in-house IT Support Portal ("the Portal"). Like a constitution, it does not describe every implementation detail line-by-line — it establishes the **non-negotiable structure, principles, and contracts** that every module, screen, and API must respect. Where an implementer must choose between two paths and this document is silent, the choice must be justified against Part I (Principles) and recorded in an Architecture Decision Record (ADR) per Part XIV.
 
 This document supersedes the original lightweight specification. Nothing in the original scope is lost — it is expanded, structured, and made buildable.
+
+### Companion Document
+
+This constitution is read alongside **`Support_Portal_Functional_Reference.md`**, which specifies behaviour at the field, rule, setting, and algorithm level — the operational detail this document deliberately does not carry. Where the two differ the constitution governs, **except where the Functional Reference's Part Q formally amends it**.
+
+**Amendments in force** (recorded in Functional Reference Part Q):
+
+| ID | Effect | Amends |
+|---|---|---|
+| **A-001** | Three-layer permission model: roles + per-user grants/revocations, per-permission scope, organizational hierarchy scope | Part V (rewritten), 7.3 (added), 8.3 (added), Part XII (rephased) |
+| **A-002** | Automation observability ships with the automation engine, not after it | Part IV, Article VII |
+| **A-003** | One parameterized configuration framework instantiated per module | Part III |
+| **A-004** | ITIL Version 5 forward compatibility: explainable, overridable automated decisions | 1.3 |
+| **A-005** | Deterministic, resource-bounded intelligence is in scope; model-based is not | 1.5 |
+| **A-006** | Deferral register: `[Defer]` items are postponed with a stated trigger, distinct from excluded items | Part XII |
 
 ---
 
@@ -59,36 +74,40 @@ These principles override convenience or shortcuts at every layer of development
 
 The Portal implements the following ITIL 4 practices. This mapping is authoritative — module names in Part II map 1:1 to these practices.
 
-| ITIL 4 Practice                     | Portal Module                        | Priority |
-| ----------------------------------- | ------------------------------------ | -------- |
-| Incident Management                 | 2.1 Incident Management              | P0 (MVP) |
-| Service Request Management          | 2.2 Service Request Management       | P0 (MVP) |
-| Service Desk (practice, not module) | Realized via 2.1 + 2.2 + 2.8         | P0 (MVP) |
-| Problem Management                  | 2.3 Problem Management               | P2       |
-| Change Enablement                   | 2.4 Change Enablement                | P2       |
-| Knowledge Management                | 2.5 Knowledge Management             | P1       |
-| Service Configuration Management    | 2.6 Asset & CMDB                     | P1       |
-| Service Level Management            | 2.7 SLA/OLA Management               | P1       |
-| Monitoring & Event Management       | Integration hook only (Part IV.8)    | P3       |
-| Continual Improvement               | 2.9 Reporting & Analytics feeds this | P2       |
+| ITIL 4 Practice | Portal Module | Priority |
+|---|---|---|
+| Incident Management | 2.1 Incident Management | P0 (MVP) |
+| Service Request Management | 2.2 Service Request Management | P0 (MVP) |
+| Service Desk (practice, not module) | Realized via 2.1 + 2.2 + 2.8 | P0 (MVP) |
+| Problem Management | 2.3 Problem Management | P2 |
+| Change Enablement | 2.4 Change Enablement | P2 |
+| Knowledge Management | 2.5 Knowledge Management | P1 |
+| Service Configuration Management | 2.6 Asset & CMDB | P1 |
+| Service Level Management | 2.7 SLA/OLA Management | P1 |
+| Monitoring & Event Management | Integration hook only (Part IV.8) | P3 |
+| Continual Improvement | 2.9 Reporting & Analytics feeds this | P2 |
 
 Priority key: **P0** = MVP/Phase 1, **P1** = Phase 2, **P2** = Phase 3, **P3** = Phase 4+.
 
+> **Amendment A-004.** ITIL Version 5 was announced in early 2026, with publications rolling out through the year; **ITIL 4 remains the practical baseline** and Version 5 builds on it rather than replacing its foundations. Two Version 5 directions are adopted now because they are cheap to accommodate and expensive to retrofit: (a) every automated or inferred decision stores a reason and permits human override (Functional Reference F7); (b) the Service Catalog item model must not assume "service" excludes "product". Full practice-to-module map: Functional Reference A3.
+
 ## 1.4 Personas
 
-| Persona                         | Description                                                             | Primary Surface                 |
-| ------------------------------- | ----------------------------------------------------------------------- | ------------------------------- |
-| **Requester** (End User)        | Any employee raising tickets. No ITSM knowledge assumed.                | Self-service portal, mobile     |
-| **Technician (Agent)**          | Handles assigned tickets, works the queue.                              | Agent web console, mobile       |
-| **Team Lead**                   | Owns a queue/department, reassigns, monitors SLA breaches.              | Agent console + team dashboards |
-| **Change/Problem Manager**      | Runs CAB, links problems to incidents.                                  | Agent console, advanced modules |
-| **Administrator**               | Configures fields, workflows, roles, automations, integrations.         | Admin console                   |
-| **Auditor** (read-only)         | Views audit logs, reports; cannot modify data.                          | Reporting + audit views only    |
-| **Integration/Service Account** | Non-human identity used by monitoring tools, email-to-ticket, webhooks. | API only                        |
+| Persona | Description | Primary Surface |
+|---|---|---|
+| **Requester** (End User) | Any employee raising tickets. No ITSM knowledge assumed. | Self-service portal, mobile |
+| **Technician (Agent)** | Handles assigned tickets, works the queue. | Agent web console, mobile |
+| **Team Lead** | Owns a queue/department, reassigns, monitors SLA breaches. | Agent console + team dashboards |
+| **Change/Problem Manager** | Runs CAB, links problems to incidents. | Agent console, advanced modules |
+| **Administrator** | Configures fields, workflows, roles, automations, integrations. | Admin console |
+| **Auditor** (read-only) | Views audit logs, reports; cannot modify data. | Reporting + audit views only |
+| **Integration/Service Account** | Non-human identity used by monitoring tools, email-to-ticket, webhooks. | API only |
 
 ## 1.5 Scope
 
 **In scope:** Incident, Service Request, Problem, Change, Knowledge, Asset/CMDB, SLA, self-service portal, RBAC, automation/business rules engine, custom fields/forms, dashboards & reporting, notifications (email + in-app + push), CSAT surveys, audit logging, REST API, responsive web app usable on desktop and mobile browsers, installable PWA, optional native wrapper.
+
+> **Amendment A-005.** The original blanket exclusion of "AI-based ticket triage" is narrowed. **Deterministic and statistically simple intelligence is in scope** — duplicate detection, priority-weighted routing, knowledge deflection, resolution memory, anomaly signals — because it is cheap, explainable, and high-value (Functional Reference Part F). Model-based, predictive, and LLM-dependent features remain out of scope or deferred. Binding constraint: no model training, no vector database, no GPU, no per-request external call in the hot path.
 
 **Out of scope (v1):** Full CMDB dependency mapping/service maps, native React Native apps (deferred — see 10.3), billing/chargeback, multi-tenant SaaS hosting for external customers, AI-based ticket triage (flagged as a future extension point, not built in v1).
 
@@ -111,7 +130,7 @@ Priority key: **P0** = MVP/Phase 1, **P1** = Phase 2, **P2** = Phase 3, **P3** =
 - Unified ticket object shared with Service Requests (`ticket.type = INCIDENT`), per original spec — see Part VII.
 - **Status workflow (configurable per Article II, default below):**
   `New → Open → In Progress → Pending (Customer) → Pending (Vendor) → Resolved → Closed → Reopened`
-- **Priority Matrix:** Priority is _derived_, not freely chosen, from Impact × Urgency (standard ITIL 5x5 or 3x3 matrix, admin-configurable grid — see 3.x).
+- **Priority Matrix:** Priority is *derived*, not freely chosen, from Impact × Urgency (standard ITIL 5x5 or 3x3 matrix, admin-configurable grid — see 3.x).
 - **Major Incident flag:** any incident can be escalated to "Major Incident," which triggers: dedicated Slack/email broadcast, war-room ticket linking, executive-visible dashboard, and mandatory post-incident review task.
 - Multi-level categorization: `Category > Subcategory > Item` (e.g., Hardware > Laptop > Screen).
 - Rich text description & replies (inline image paste, drag-drop attachments, PDF/log uploads), full reply history threaded like an email client.
@@ -273,7 +292,6 @@ Event occurs (ticket created / updated / SLA tick / scheduled cron)
 ## 4.2 Auto-Assignment / Routing
 
 Selectable strategy per queue/department:
-
 - **Round Robin** — even rotation among available agents.
 - **Load-Based** — assign to the agent with fewest open tickets.
 - **Skill/Category-Based** — mapping table of Category → preferred team/agent.
@@ -319,28 +337,74 @@ Selectable strategy per queue/department:
 - **LDAP/Active Directory** bind-based auth as an additional pluggable provider (common for on-prem banking/enterprise environments).
 - **MFA:** TOTP (authenticator app) mandatory-by-policy option, enforceable per role (e.g., mandatory for Admin role).
 
-## 5.2 RBAC Model
+## 5.2 Permission Model — Three Layers
 
-- `Role` → set of `Permission`s. Permissions are granular and resource-scoped, e.g. `ticket.view.own`, `ticket.view.team`, `ticket.view.all`, `ticket.edit.assigned`, `ticket.delete`, `asset.manage`, `automation.manage`, `role.manage`, `report.view.org`.
-- Default roles shipped out of the box (all editable/cloneable, never hardcoded into logic — Article III): **Requester, Technician, Team Lead, Change Manager, Admin, Auditor.**
-- Permission checks happen **server-side on every API call** — the frontend hides UI it has no permission for, but this is UX only, never the security boundary.
+> **Revised by Amendment A-001** (Functional Reference, Part Q). The original two-layer role→permission model is superseded. Authoritative specification: **Functional Reference Part I**. Data model: **7.3** below.
 
-### Sample Permission Matrix (abridged — full matrix in Appendix B)
+Effective permissions are computed from three composable layers:
 
-| Permission               | Requester | Technician    | Team Lead | Admin    | Auditor             |
-| ------------------------ | --------- | ------------- | --------- | -------- | ------------------- |
-| Create ticket            | ✅ (own)  | ✅            | ✅        | ✅       | ❌                  |
-| View own tickets         | ✅        | ✅            | ✅        | ✅       | ✅                  |
-| View team tickets        | ❌        | ✅ (assigned) | ✅ (team) | ✅ (all) | ✅ (all, read-only) |
-| Edit ticket status       | ❌        | ✅ (assigned) | ✅ (team) | ✅       | ❌                  |
-| Manage SLA policies      | ❌        | ❌            | ❌        | ✅       | ❌                  |
-| Manage roles/permissions | ❌        | ❌            | ❌        | ✅       | ❌                  |
-| View audit log           | ❌        | ❌            | ❌        | ✅       | ✅                  |
-| Configure automations    | ❌        | ❌            | ❌        | ✅       | ❌                  |
+```
+EFFECTIVE PERMISSIONS =
+      ( union of permissions from the user's ROLES )
+    + ( user-level GRANTS      — additive, per individual )
+    − ( user-level REVOCATIONS — subtractive, per individual )
+  ⨯ ( SCOPE: own / group / department / location / hierarchy / custom / all )
+```
 
-## 5.3 Scoping (ABAC layer on top of RBAC)
+**Layer 1 — Roles.** Named bundles of permissions representing job functions, composed from reusable **permission sets**. Most users need nothing beyond roles; the other layers are exceptions, not the norm.
 
-- Attribute-based narrowing: Department and Team membership scope "team"-level permissions automatically — a Team Lead of Networking only sees Networking's queue even though their Role grants "view team tickets" generically.
+**Layer 2 — User-level overrides.** An administrator may grant an individual a permission their roles don't confer, or revoke one their roles do. This exists because organizations always contain people whose access doesn't match a clean job function, and minting a role per exception produces role sprawl that is harder to audit than the exceptions.
+
+**Layer 3 — Scope.** Every permission is evaluated against a scope determining *which records* it applies to. Scope is assigned **per permission, not per role** — a user may hold `request.view` at `department` scope while holding `request.edit` at `own`.
+
+### Resolution rules (must be unambiguous)
+
+1. **Revocation always wins.** No "grant overrides revoke" case, so revocation is a reliable safety instrument.
+2. **Grants are additive across roles** — multiple roles union rather than conflict.
+3. **Grants may widen scope; revocations may only remove.**
+4. **Overrides are visible.** A user whose effective permissions differ from their roles' is flagged in the user list and on their profile, with deltas enumerated. Invisible exceptions become forgotten exceptions.
+5. **Every override carries** grantor, timestamp, required justification, and optional expiry.
+
+### Enforcement
+
+- Permission checks happen **server-side on every API call**. The frontend hides UI the user lacks access to, but that is UX only, never the security boundary.
+- Scope is enforced in the **data layer, once**, via a single `applyScope(query, user, permission)` helper. Enforcing scope per endpoint guarantees an endpoint eventually gets missed — and the miss is a data leak, not a visible bug.
+
+### Default roles (seeded, all duplicable)
+
+Super Admin · Service Desk Technician · Request Specialist · Problem Specialist · Change Specialist · Team Lead · Change Manager · Knowledge Manager · Dashboard Viewer · Report Viewer · Auditor · Requester.
+
+**Predefined roles are permission-locked** (membership editable, permission set not) so an administrator cannot accidentally lock everyone out. Organizations needing a variant duplicate the role.
+
+The complete permission catalogue (~150 entries across all modules, including transition-level permissions) is in **Functional Reference I2**.
+
+## 5.3 Scope Resolution & Organizational Hierarchy
+
+| Scope | Meaning |
+|---|---|
+| `own` | Records where the user is requester, assignee, watcher, or collaborator |
+| `group` | Records belonging to the user's technician group(s) |
+| `department` | Records in the user's department, optionally including sub-departments |
+| `location` | Records at the user's location, optionally including child locations |
+| `hierarchy` | The user **and everyone reporting to them, transitively** |
+| `custom` | Records matching an admin-defined attribute filter |
+| `all` | Unrestricted |
+
+**Hierarchy scope** is new in A-001. Each user carries an optional `manager_id` forming a reporting tree **independent of the department tree** — departments describe where you work, the reporting tree describes who answers to you, and these are frequently different shapes. Depth is configurable per assignment (`hierarchy:1` for direct reports, `hierarchy:*` for the full subtree), because "my direct reports" and "my entire division" are different grants.
+
+**Custom scopes** are named, reusable attribute filters (including over custom fields) assignable to a role or an individual — e.g. "Technician, but only tickets where Location = Colombo and Category = Network." Reusability matters: one scope assigned to nine people stays consistent; nine hand-built filters drift.
+
+## 5.3a Privilege Safety Rules (non-negotiable)
+
+A granular grant/revoke system without these is **more dangerous** than the fixed model it replaces:
+
+1. **No self-escalation** — a user cannot grant themselves a permission, edit a role they hold, or modify their own overrides.
+2. **No privilege amplification** — a user cannot grant another user permissions exceeding their own effective set.
+3. **Last-administrator protection** — the system blocks any operation leaving zero active users with full admin permissions.
+4. **Justification required** on every grant and revocation, stored in the audit record.
+5. **Forced logout on permission change** — a revocation that only takes effect at next login is not a revocation.
+6. **Step-up MFA** for permission grants, role edits, API key creation, and data export.
+7. **Periodic access review** — a report of every user-level override, with a review reminder. This is the control that prevents slow privilege accumulation, and the artefact an auditor asks for.
 
 ## 5.4 Multi-Factor Authentication
 
@@ -418,16 +482,16 @@ Selectable strategy per queue/department:
 
 ## 6.2 Component Breakdown
 
-| Component            | Responsibility                                                                    |
-| -------------------- | --------------------------------------------------------------------------------- |
-| Auth Service         | Login, SSO/OIDC/SAML/LDAP handshake, session/JWT issuance, MFA                    |
-| Ticketing Service    | Incident/Request/Problem/Change CRUD, workflow engine, SLA linkage                |
-| Asset/CMDB Service   | Asset CRUD, ticket-asset linking, relationship graph                              |
-| Automation Service   | Rule evaluation (Part IV), runs primarily as queue consumers                      |
-| Notification Service | Renders templates, dispatches email/in-app/push                                   |
-| Reporting Service    | Aggregation queries, dashboard data, scheduled exports                            |
-| Integration Service  | Inbound email/webhook ingestion, outbound webhook dispatch, SSO provider adapters |
-| Background Workers   | Queue consumers for anything not required to be synchronous                       |
+| Component | Responsibility |
+|---|---|
+| Auth Service | Login, SSO/OIDC/SAML/LDAP handshake, session/JWT issuance, MFA |
+| Ticketing Service | Incident/Request/Problem/Change CRUD, workflow engine, SLA linkage |
+| Asset/CMDB Service | Asset CRUD, ticket-asset linking, relationship graph |
+| Automation Service | Rule evaluation (Part IV), runs primarily as queue consumers |
+| Notification Service | Renders templates, dispatches email/in-app/push |
+| Reporting Service | Aggregation queries, dashboard data, scheduled exports |
+| Integration Service | Inbound email/webhook ingestion, outbound webhook dispatch, SSO provider adapters |
+| Background Workers | Queue consumers for anything not required to be synchronous |
 
 ## 6.3 Real-Time Updates
 
@@ -465,8 +529,24 @@ erDiagram
     USER ||--o{ TICKET : "assigned to"
     USER }o--|| DEPARTMENT : belongs_to
     USER }o--o{ TEAM : member_of
-    ROLE ||--o{ USER : assigned_to
-    ROLE ||--o{ PERMISSION : grants
+    USER }o--o| USER : "reports to (manager_id)"
+
+    USER }o--o{ ROLE : "has (UserRole)"
+    ROLE }o--o{ PERMISSION_SET : "composed of"
+    PERMISSION_SET }o--o{ PERMISSION : contains
+    ROLE ||--o{ ROLE_PERMISSION : grants
+    ROLE_PERMISSION }o--|| PERMISSION : references
+    ROLE_PERMISSION }o--o| CUSTOM_SCOPE : "scoped by"
+
+    USER ||--o{ USER_PERMISSION_OVERRIDE : has
+    USER_PERMISSION_OVERRIDE }o--|| PERMISSION : references
+    USER_PERMISSION_OVERRIDE }o--o| CUSTOM_SCOPE : "scoped by"
+    USER_PERMISSION_OVERRIDE }o--|| USER : "granted by"
+
+    USER ||--o{ PERMISSION_DELEGATION : delegates
+    PERMISSION_DELEGATION }o--|| USER : "delegated to"
+
+    STATUS_TRANSITION }o--o{ PERMISSION : "restricted to"
 
     TICKET }o--|| TICKET_TYPE : classified_as
     TICKET }o--|| CATEGORY : categorized_as
@@ -505,38 +585,101 @@ erDiagram
 
 ## 7.2 Core Table Definitions
 
-| Entity                      | Key Attributes                                                                                                                                                          | Notes                               |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| **User**                    | id, name, email, password_hash (nullable if SSO-only), role_id, department_id, mfa_secret, status (active/disabled), created_at                                         |                                     |
-| **Role**                    | id, name, is_system_role (bool)                                                                                                                                         | Editable/cloneable, never hardcoded |
-| **Permission**              | id, key (e.g. `ticket.edit.assigned`), description                                                                                                                      | Seeded, referenced by code          |
-| **RolePermission**          | role_id, permission_id                                                                                                                                                  | Join table                          |
-| **Department / Team**       | id, name, parent_department_id (optional hierarchy)                                                                                                                     |                                     |
-| **Ticket**                  | id, title, description (rich text), type_id, category_id, status_id, priority_id, requester_id, assignee_id, team_id, sla_policy_id, created_at, resolved_at, closed_at |                                     |
-| **TicketType**              | id, name, default_status_workflow_id                                                                                                                                    | Incident / Service Request / etc.   |
-| **Category**                | id, name, parent_category_id                                                                                                                                            | Multi-level via self-reference      |
-| **Status / StatusWorkflow** | id, name, workflow_id, is_terminal                                                                                                                                      | Configurable per Ticket Type (3.3)  |
-| **Priority**                | id, name, weight                                                                                                                                                        | Derived via Impact×Urgency matrix   |
-| **SLAPolicy**               | id, name, scope (SLA/OLA), conditions (JSON), response_target_mins, resolution_target_mins, calendar_id                                                                 |                                     |
-| **BusinessCalendar**        | id, name, working_hours (JSON), holidays (JSON), timezone                                                                                                               |                                     |
-| **Comment**                 | id, ticket_id, author_id, body, is_internal (bool), created_at                                                                                                          |                                     |
-| **Attachment**              | id, file_name, file_path/object_key, mime_type, uploaded_at, owner_type (Ticket/Asset/KB), owner_id                                                                     |                                     |
-| **Asset**                   | id, asset_tag, asset_type_id, model, serial, status, assigned_user_id, department_id, purchase_date, warranty_expiry                                                    |                                     |
-| **AssetType**               | id, name                                                                                                                                                                | Drives which custom fields apply    |
-| **Problem**                 | id, title, description, status, root_cause, workaround, known_error (bool)                                                                                              |                                     |
-| **ChangeRequest**           | id, title, type (Standard/Normal/Emergency), risk_level, status, scheduled_start, scheduled_end, rollback_plan                                                          |                                     |
-| **ApprovalRequest**         | id, approvable_type, approvable_id, approver_id, sequence_order, status (Pending/Approved/Rejected), decided_at                                                         |                                     |
-| **KnowledgeArticle**        | id, title, body, category_id, visibility, status, version                                                                                                               |                                     |
-| **ArticleFeedback**         | id, article_id, user_id, helpful (bool), comment                                                                                                                        |                                     |
-| **CustomField**             | id, label, field_type, applies_to (Ticket/Asset/etc.), scope_id (type/catalog item), required, validation                                                               |                                     |
-| **CustomFieldValue**        | id, custom_field_id, entity_type, entity_id, value                                                                                                                      | EAV pattern                         |
-| **AutomationRule**          | id, name, trigger_type, priority_order, enabled                                                                                                                         |                                     |
-| **AutomationCondition**     | id, rule_id, field, operator, value, group (AND/OR)                                                                                                                     |                                     |
-| **AutomationAction**        | id, rule_id, action_type, params (JSON), order                                                                                                                          |                                     |
-| **AutomationExecutionLog**  | id, rule_id, ticket_id, result (success/fail), error_message, executed_at                                                                                               | Article VII                         |
-| **NotificationTemplate**    | id, event_type, channel, subject, body_template                                                                                                                         |                                     |
-| **AuditLog**                | id, actor_id, action, entity_type, entity_id, diff (JSON), ip_address, created_at                                                                                       | Immutable                           |
-| **OrgSettings**             | key, value                                                                                                                                                              | Branding, retention policy, etc.    |
+| Entity | Key Attributes | Notes |
+|---|---|---|
+| **User** | id, name, email, logon_name, password_hash (nullable if SSO-only), department_id, location_id, **manager_id**, **reporting_path**, support_level, availability_status, do_not_disturb, mfa_secret, status (active/blocked/archived), blocked_reason, created_at | Roles via UserRole join — **no `role_id` column**; users may hold several roles (7.3) |
+| **Department / Team** | id, name, parent_department_id (optional hierarchy) | |
+| **Ticket** | id, title, description (rich text), type_id, category_id, status_id, priority_id, requester_id, assignee_id, team_id, sla_policy_id, created_at, resolved_at, closed_at | |
+| **TicketType** | id, name, default_status_workflow_id | Incident / Service Request / etc. |
+| **Category** | id, name, parent_category_id | Multi-level via self-reference |
+| **Status / StatusWorkflow** | id, name, workflow_id, is_terminal | Configurable per Ticket Type (3.3) |
+| **Priority** | id, name, weight | Derived via Impact×Urgency matrix |
+| **SLAPolicy** | id, name, scope (SLA/OLA), conditions (JSON), response_target_mins, resolution_target_mins, calendar_id | |
+| **BusinessCalendar** | id, name, working_hours (JSON), holidays (JSON), timezone | |
+| **Comment** | id, ticket_id, author_id, body, is_internal (bool), created_at | |
+| **Attachment** | id, file_name, file_path/object_key, mime_type, uploaded_at, owner_type (Ticket/Asset/KB), owner_id | |
+| **Asset** | id, asset_tag, asset_type_id, model, serial, status, assigned_user_id, department_id, purchase_date, warranty_expiry | |
+| **AssetType** | id, name | Drives which custom fields apply |
+| **Problem** | id, title, description, status, root_cause, workaround, known_error (bool) | |
+| **ChangeRequest** | id, title, type (Standard/Normal/Emergency), risk_level, status, scheduled_start, scheduled_end, rollback_plan | |
+| **ApprovalRequest** | id, approvable_type, approvable_id, approver_id, sequence_order, status (Pending/Approved/Rejected), decided_at | |
+| **KnowledgeArticle** | id, title, body, category_id, visibility, status, version | |
+| **ArticleFeedback** | id, article_id, user_id, helpful (bool), comment | |
+| **CustomField** | id, label, field_type, applies_to (Ticket/Asset/etc.), scope_id (type/catalog item), required, validation | |
+| **CustomFieldValue** | id, custom_field_id, entity_type, entity_id, value | EAV pattern |
+| **AutomationRule** | id, name, trigger_type, priority_order, enabled | |
+| **AutomationCondition** | id, rule_id, field, operator, value, group (AND/OR) | |
+| **AutomationAction** | id, rule_id, action_type, params (JSON), order | |
+| **AutomationExecutionLog** | id, rule_id, ticket_id, result (success/fail), error_message, executed_at | Article VII |
+| **NotificationTemplate** | id, event_type, channel, subject, body_template | |
+| **AuditLog** | id, actor_id, action, entity_type, entity_id, diff (JSON), ip_address, created_at | Immutable |
+| **OrgSettings** | key, value | Branding, retention policy, etc. |
+
+## 7.3 Access Control Data Model
+
+> Added by **Amendment A-001**. Behavioural specification: Functional Reference Part I.
+
+### 7.3.1 Tables
+
+| Entity | Key Attributes | Notes |
+|---|---|---|
+| **Permission** | id, `key` (e.g. `request.edit.description`), module, description, is_sensitive (bool) | Seeded from the catalogue (Ref I2), referenced by code. `is_sensitive` drives step-up MFA and optional approval-gating |
+| **PermissionSet** | id, name, description, is_system (bool) | Reusable bundle — the middle unit between one permission and a whole role |
+| **PermissionSetItem** | permission_set_id, permission_id, default_scope | |
+| **Role** | id, name, description, is_system_role (bool), is_default_on_conversion (bool) | System roles are **permission-locked**; membership still editable |
+| **RolePermissionSet** | role_id, permission_set_id | Roles composed from sets |
+| **RolePermission** | role_id, permission_id, scope (enum), scope_depth (int, nullable), custom_scope_id (nullable) | Direct grants outside a set. **Scope lives here, not on Role** |
+| **UserRole** | user_id, role_id, assigned_at, assigned_by | A user may hold several roles |
+| **UserPermissionOverride** | id, user_id, permission_id, **effect** (`GRANT` / `REVOKE`), scope, scope_depth, custom_scope_id, **justification** (text, required), granted_by, granted_at, **expires_at** (nullable), revoked_at, revoked_by | The A-001 core. Revocation always wins |
+| **CustomScope** | id, name, description, entity_type, conditions (JSONB) | Named, reusable attribute filter; may reference custom fields |
+| **PermissionDelegation** | id, delegator_id, delegate_id, permission_ids (array) or permission_set_id, starts_at, ends_at, reason, created_by, active (bool) | Strictly ⊆ delegator's effective set |
+| **StatusTransition** | id, module, from_status_id, to_status_id, allowed_permissions (array), required_fields (array), enabled | Transition-level gating (Ref I2.9) — a first-class record, not application logic |
+| **EffectivePermissionCache** | user_id, permissions (JSONB), computed_at, invalidated_at | Optional, see 7.3.3 |
+
+### 7.3.2 Indexes and constraints
+
+- `UserPermissionOverride`: unique on `(user_id, permission_id, effect)` where `revoked_at IS NULL`; index on `expires_at` for the expiry sweeper.
+- `User.reporting_path`: materialized path string (e.g. `/1/7/22/`), **B-tree index for prefix matching** so hierarchy-scope subtree queries are an indexed `LIKE '/1/7/%'` rather than a recursive CTE per request.
+- `User.manager_id`: **cycle check on every assignment** — a reporting loop makes subtree resolution non-terminating. Reject the assignment; do not merely detect it later.
+- `reporting_path` is recomputed for the moved node **and its entire subtree** when a manager changes. This is the one expensive operation in the model; queue it if a subtree is large.
+- `CustomScope.conditions`: GIN index on JSONB.
+- `AuditLog`: append-only — revoke UPDATE and DELETE at the database role level, not merely in application code.
+
+### 7.3.3 Resolution algorithm
+
+```
+resolveEffectivePermissions(user):
+    perms = {}                                   # permission_key -> scope
+    for role in user.roles:                      # Layer 1
+        for (perm, scope) in role.allPermissions():
+            perms[perm] = widest(perms[perm], scope)
+    for d in activeDelegationsTo(user):          # Layer 1b (time-bounded)
+        for (perm, scope) in d.permissions:
+            if delegatorStillHas(d.delegator, perm):
+                perms[perm] = widest(perms[perm], scope)
+    for o in user.overrides where active(o):     # Layer 2
+        if o.effect == GRANT:
+            perms[o.permission] = widest(perms[o.permission], o.scope)
+    for o in user.overrides where active(o):     # Revocations applied LAST
+        if o.effect == REVOKE:
+            delete perms[o.permission]           # unconditional — revoke always wins
+    return perms
+```
+
+Two ordering requirements that are not optional: **revocations are applied in a second pass after all grants**, and **delegated permissions are re-validated against the delegator's current effective set at use time** — a delegator who loses a permission must not continue conferring it.
+
+### 7.3.4 Caching and invalidation
+
+Recomputing this on every request is wasteful; caching it wrongly is a security bug. Rules:
+
+- Cache the resolved set in Redis keyed by `user_id`, with a short TTL (5 minutes) **and** explicit invalidation.
+- **Invalidate immediately on:** role membership change, role permission change, permission-set change, override create/revoke/expire, delegation start/end, department/location/manager change, custom scope edit, user block/archive.
+- A permission change also **forces logout** (Ref I5), so the cache and the session die together.
+- Scope predicates are **not** cached — they are resolved per query in `applyScope()` against current data, because a user's department or subtree can change between requests.
+
+### 7.3.5 Seeding
+
+Permissions are seeded from a versioned manifest checked into the repo, not created by hand. Each release migration reconciles the manifest with the `Permission` table: **new permissions are added disabled-by-default for existing custom roles** (so an upgrade never silently widens anyone's access), and removed permissions are soft-deleted with a warning naming the roles that referenced them.
 
 ---
 
@@ -552,22 +695,81 @@ erDiagram
 
 ## 8.2 Representative Endpoint Groups
 
-| Group           | Endpoints (representative, not exhaustive)                                                                                                       |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Auth            | `POST /auth/login`, `POST /auth/logout`, `POST /auth/mfa/verify`, `GET /auth/sso/callback`                                                       |
-| Tickets         | `GET/POST /tickets`, `GET/PATCH /tickets/{id}`, `POST /tickets/{id}/comments`, `POST /tickets/{id}/attachments`, `POST /tickets/{id}/transition` |
-| Service Catalog | `GET /catalog`, `GET /catalog/{id}/form`, `POST /catalog/{id}/request`                                                                           |
-| Assets          | `GET/POST /assets`, `GET/PATCH /assets/{id}`, `POST /assets/import`                                                                              |
-| Problems        | `GET/POST /problems`, `POST /problems/{id}/link-ticket/{ticketId}`                                                                               |
-| Changes         | `GET/POST /changes`, `POST /changes/{id}/approve`, `GET /changes/calendar`                                                                       |
-| Knowledge       | `GET /kb/articles`, `GET /kb/search?q=`, `POST /kb/articles/{id}/feedback`                                                                       |
-| Automation      | `GET/POST /admin/automation-rules`, `GET /admin/automation-rules/{id}/logs`                                                                      |
-| Reporting       | `GET /reports/dashboards/{id}`, `POST /reports/custom`, `GET /reports/export.csv`                                                                |
-| Admin/RBAC      | `GET/POST /admin/roles`, `PATCH /admin/roles/{id}/permissions`, `GET /admin/audit-log`                                                           |
-| Webhooks        | `POST /webhooks/inbound/{integrationId}` (external → us), Admin-configured outbound targets stored under `/admin/integrations`                   |
-| Realtime        | `WS /realtime` — subscribes to ticket/queue channels                                                                                             |
+| Group | Endpoints (representative, not exhaustive) |
+|---|---|
+| Auth | `POST /auth/login`, `POST /auth/logout`, `POST /auth/mfa/verify`, `GET /auth/sso/callback` |
+| Tickets | `GET/POST /tickets`, `GET/PATCH /tickets/{id}`, `POST /tickets/{id}/comments`, `POST /tickets/{id}/attachments`, `POST /tickets/{id}/transition` |
+| Service Catalog | `GET /catalog`, `GET /catalog/{id}/form`, `POST /catalog/{id}/request` |
+| Assets | `GET/POST /assets`, `GET/PATCH /assets/{id}`, `POST /assets/import` |
+| Problems | `GET/POST /problems`, `POST /problems/{id}/link-ticket/{ticketId}` |
+| Changes | `GET/POST /changes`, `POST /changes/{id}/approve`, `GET /changes/calendar` |
+| Knowledge | `GET /kb/articles`, `GET /kb/search?q=`, `POST /kb/articles/{id}/feedback` |
+| Automation | `GET/POST /admin/automation-rules`, `GET /admin/automation-rules/{id}/logs` |
+| Reporting | `GET /reports/dashboards/{id}`, `POST /reports/custom`, `GET /reports/export.csv` |
+| Access Control | See **8.3** — expanded by Amendment A-001 |
+| Webhooks | `POST /webhooks/inbound/{integrationId}` (external → us), Admin-configured outbound targets stored under `/admin/integrations` |
+| Realtime | `WS /realtime` — subscribes to ticket/queue channels |
 
-## 8.3 Webhooks (Outbound Contract)
+## 8.3 Access Control API
+
+> Added by **Amendment A-001**. Every endpoint here is itself permission-gated (Ref I2.5) and audited; the mutating ones require step-up MFA (5.3a).
+
+### Roles, sets, permissions
+
+| Method & path | Purpose | Required permission |
+|---|---|---|
+| `GET /admin/permissions` | The permission catalogue, grouped by module | `role.view` |
+| `GET/POST /admin/permission-sets` | List / create reusable bundles | `role.view` / `role.create` |
+| `GET/PATCH/DELETE /admin/permission-sets/{id}` | Manage a set | `role.edit` |
+| `GET/POST /admin/roles` | List / create roles | `role.view` / `role.create` |
+| `GET/PATCH/DELETE /admin/roles/{id}` | Manage a role | `role.edit` / `role.delete` |
+| `POST /admin/roles/{id}/duplicate` | Clone as a starting point | `role.create` |
+| `PUT /admin/roles/{id}/permissions` | Replace the role's permission+scope set | `role.edit` |
+| `GET/PUT /admin/roles/{id}/users` | Role membership | `role.assign` |
+
+`PATCH`/`DELETE` on a role where `is_system_role = true` returns **409** for permission changes but permits membership changes (5.2).
+
+### User-level overrides
+
+| Method & path | Purpose | Required permission |
+|---|---|---|
+| `GET /users/{id}/permissions/effective` | Resolved set **with provenance** per permission (which role, or which override) | `user.view` (own: always) |
+| `GET /users/{id}/permissions/overrides` | Active overrides, including pending expiry | `user.view` |
+| `POST /users/{id}/permissions/overrides` | Create a GRANT or REVOKE | `user.permission.grant` / `.revoke` |
+| `DELETE /users/{id}/permissions/overrides/{overrideId}` | Withdraw an override | corresponding grant/revoke permission |
+| `GET /users/{id}/permissions/diff` | Deltas vs the user's roles — powers the profile flag | `user.view` |
+| `POST /admin/permissions/explain` | **"Why can't this user do X?"** — body `{userId, permission, entityId?}`; returns the full resolution chain and the deciding rule | `user.view` |
+| `POST /admin/permissions/simulate` | Preview the system as a given user or role sees it, without acquiring their access | `role.view` |
+
+`POST .../overrides` body: `{ permissionKey, effect, scope, scopeDepth?, customScopeId?, justification (required), expiresAt? }`.
+
+**Rejections that must be explicit, not generic 403s:** self-escalation (**422**, "cannot modify your own permissions"), privilege amplification (**422**, naming the permissions the actor lacks), last-administrator violation (**409**), missing justification (**400**).
+
+### Scopes, delegation, hierarchy
+
+| Method & path | Purpose |
+|---|---|
+| `GET/POST /admin/custom-scopes` · `GET/PATCH/DELETE /admin/custom-scopes/{id}` | Named reusable attribute filters |
+| `POST /admin/custom-scopes/{id}/preview` | How many records the scope currently matches — before assigning it |
+| `GET/POST /users/{id}/delegations` · `DELETE /users/{id}/delegations/{delegationId}` | Delegation (`user.delegate`) |
+| `GET /users/{id}/reports?depth=` | Direct or transitive subordinates (hierarchy scope) |
+| `PATCH /users/{id}` with `managerId` | Sets the reporting line; **409 on cycle detection**, and triggers subtree `reporting_path` recomputation |
+
+### Transitions and review
+
+| Method & path | Purpose |
+|---|---|
+| `GET/PUT /admin/modules/{module}/transitions` | Transition-level permission gating (7.3.1 `StatusTransition`) |
+| `GET /admin/access-review` | Every user-level override with grantor, justification, and expiry — the audit artefact (5.3a #7) |
+| `GET /admin/access-review/export` | CSV/PDF, async via the jobs queue |
+
+### Cross-cutting API rules
+
+- **Every** list endpoint in the API applies `applyScope()` — scope is not an admin-endpoint concern, it governs all reads.
+- API keys are scoped, revocable, expiring, and resolve to permissions through the same three-layer model. There is no privileged API bypass.
+- `GET /auth/me/permissions` returns the caller's effective set so the frontend can render accordingly — **a convenience for UI, never the enforcement point.**
+
+## 8.4 Webhooks (Outbound Contract)
 
 Every outbound webhook payload carries: `event`, `timestamp`, `data` (the affected entity), and an `X-Signature` HMAC header (secret configured per integration) so receivers can verify authenticity.
 
@@ -718,22 +920,22 @@ Use a single design system (Part X specifies shadcn/ui + Tailwind) so every prot
 
 # PART X — TECHNOLOGY STACK
 
-| Layer            | Recommendation                                                                                     | Rationale                                                                                                                                                 |
-| ---------------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Backend          | **Node.js + NestJS** (TypeScript) _or_ **Python + FastAPI**                                        | Both offer strong typing/validation and OpenAPI generation for free (supports Article I). Pick one per team's existing skill; document choice as ADR-000. |
-| Frontend (Web)   | **React + TypeScript**, Vite build, **Tailwind CSS + shadcn/ui**                                   | Matches original spec's SPA requirement; shadcn/ui gives accessible, themeable components out of the box (supports 3.6, 9.1).                             |
-| State/data       | React Query (server-state) + minimal client state (Zustand/Context)                                | Keeps API as single source of truth (Article I).                                                                                                          |
-| Mobile           | **PWA** (installable, offline shell, push) from the same React codebase                            | Satisfies "mobile friendly" without a second codebase; native app deferred (see 10.3)                                                                     |
-| Desktop          | Same responsive web app; optional **Tauri** wrapper later                                          | Avoids Electron bloat if a taskbar app is ever wanted                                                                                                     |
-| Database         | **PostgreSQL 15+**                                                                                 | Relational integrity for users/tickets/assets; JSONB support covers CustomFieldValue/automation condition storage                                         |
-| Cache/Queue      | **Redis** (+ BullMQ if Node / Celery if Python)                                                    | Automation queue, SLA ticking, WebSocket pub/sub                                                                                                          |
-| Search           | Postgres full-text (`tsvector`) v1; OpenSearch as documented future swap                           | Simplicity first (Article VIII)                                                                                                                           |
-| File Storage     | Abstracted `StorageProvider`: local disk (v1) → S3/MinIO-compatible (future)                       | Corrects original spec's hard dependency on local disk                                                                                                    |
-| Realtime         | WebSocket via Socket.IO or native `ws`, fanned out through Redis pub/sub                           | Multi-instance safe                                                                                                                                       |
-| Auth             | Passport.js/Authlib strategies for Local, SAML, OIDC, LDAP                                         | Pluggable per 5.1                                                                                                                                         |
-| Containerization | **Docker** + **Docker Compose** (small deployment); Kubernetes manifests optional for future scale | Matches original spec, keeps small-org deployment simple                                                                                                  |
-| CI/CD            | GitHub Actions (lint, test, build, push image)                                                     | Already using GitHub per org tooling                                                                                                                      |
-| Observability    | Structured JSON logging + Prometheus metrics endpoint + Grafana (optional)                         | Supports Article VII (visible failures)                                                                                                                   |
+| Layer | Recommendation | Rationale |
+|---|---|---|
+| Backend | **Node.js + NestJS** (TypeScript) *or* **Python + FastAPI** | Both offer strong typing/validation and OpenAPI generation for free (supports Article I). Pick one per team's existing skill; document choice as ADR-000. |
+| Frontend (Web) | **React + TypeScript**, Vite build, **Tailwind CSS + shadcn/ui** | Matches original spec's SPA requirement; shadcn/ui gives accessible, themeable components out of the box (supports 3.6, 9.1). |
+| State/data | React Query (server-state) + minimal client state (Zustand/Context) | Keeps API as single source of truth (Article I). |
+| Mobile | **PWA** (installable, offline shell, push) from the same React codebase | Satisfies "mobile friendly" without a second codebase; native app deferred (see 10.3) |
+| Desktop | Same responsive web app; optional **Tauri** wrapper later | Avoids Electron bloat if a taskbar app is ever wanted |
+| Database | **PostgreSQL 15+** | Relational integrity for users/tickets/assets; JSONB support covers CustomFieldValue/automation condition storage |
+| Cache/Queue | **Redis** (+ BullMQ if Node / Celery if Python) | Automation queue, SLA ticking, WebSocket pub/sub |
+| Search | Postgres full-text (`tsvector`) v1; OpenSearch as documented future swap | Simplicity first (Article VIII) |
+| File Storage | Abstracted `StorageProvider`: local disk (v1) → S3/MinIO-compatible (future) | Corrects original spec's hard dependency on local disk |
+| Realtime | WebSocket via Socket.IO or native `ws`, fanned out through Redis pub/sub | Multi-instance safe |
+| Auth | Passport.js/Authlib strategies for Local, SAML, OIDC, LDAP | Pluggable per 5.1 |
+| Containerization | **Docker** + **Docker Compose** (small deployment); Kubernetes manifests optional for future scale | Matches original spec, keeps small-org deployment simple |
+| CI/CD | GitHub Actions (lint, test, build, push image) | Already using GitHub per org tooling |
+| Observability | Structured JSON logging + Prometheus metrics endpoint + Grafana (optional) | Supports Article VII (visible failures) |
 
 ## 10.3 Note on Native Mobile Apps
 
@@ -743,29 +945,33 @@ A responsive PWA is the v1 mobile strategy (Article V — single data model, sin
 
 # PART XI — NON-FUNCTIONAL REQUIREMENTS
 
-| Category        | Requirement                                                                                                         |
-| --------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Performance     | Ticket list/detail loads < 1s on broadband; API p95 < 300ms for standard CRUD                                       |
-| Scalability     | Stateless app layer (horizontally scalable behind the reverse proxy); session state in Redis, not in-process        |
-| Availability    | Target 99.5% for an in-house tool; documented RTO/RPO once hosting is finalized                                     |
-| Backups         | Nightly encrypted DB dump + continuous file-storage sync (e.g., rclone per original spec), tested restore quarterly |
-| Accessibility   | WCAG 2.1 AA                                                                                                         |
-| Browser Support | Last 2 versions of Chrome, Edge, Firefox, Safari; iOS Safari and Android Chrome for mobile                          |
-| Localization    | English v1; UI strings externalized (i18n-ready) so additional languages are a translation task, not a rebuild      |
-| Data Retention  | Configurable per-entity retention (e.g., closed tickets purge/archive after N months) to support compliance (5.9)   |
+| Category | Requirement |
+|---|---|
+| Performance | Ticket list/detail loads < 1s on broadband; API p95 < 300ms for standard CRUD |
+| Scalability | Stateless app layer (horizontally scalable behind the reverse proxy); session state in Redis, not in-process |
+| Availability | Target 99.5% for an in-house tool; documented RTO/RPO once hosting is finalized |
+| Backups | Nightly encrypted DB dump + continuous file-storage sync (e.g., rclone per original spec), tested restore quarterly |
+| Accessibility | WCAG 2.1 AA |
+| Browser Support | Last 2 versions of Chrome, Edge, Firefox, Safari; iOS Safari and Android Chrome for mobile |
+| Localization | English v1; UI strings externalized (i18n-ready) so additional languages are a translation task, not a rebuild |
+| Data Retention | Configurable per-entity retention (e.g., closed tickets purge/archive after N months) to support compliance (5.9) |
 
 ---
 
 # PART XII — DEVELOPMENT ROADMAP
 
-| Phase                    | Scope                                                                                                                                                          | Depends On |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| **Phase 0 — Foundation** | Repo scaffold, CI/CD, Docker Compose dev environment, DB schema migration tooling, base auth (local), RBAC skeleton                                            | —          |
-| **Phase 1 — MVP (P0)**   | Incident + Service Request ticketing, unified workflow, basic categorization, attachments, My Tickets self-service, basic email notifications, core RBAC roles | Phase 0    |
-| **Phase 2 (P1)**         | Asset/CMDB, SLA/OLA engine + business calendars, Knowledge Base, Service Catalog with dynamic forms, CSAT surveys                                              | Phase 1    |
-| **Phase 3 (P2)**         | Automation/Business Rules engine, Custom Fields engine, Custom Report/Dashboard builder, approval workflows, SSO/MFA                                           | Phase 2    |
-| **Phase 4 (P2/P3)**      | Problem Management, Change Enablement + Change Calendar, inbound/outbound webhook integrations, email-to-ticket                                                | Phase 3    |
-| **Phase 5 (P3+)**        | PWA polish + push notifications, optional Tauri desktop packaging, optional native mobile app, OpenSearch swap-in if needed, advanced compliance/reporting     | Phase 4    |
+> **Revised by Amendment A-001.** The permission catalogue, scope enforcement, and the reporting-hierarchy field are **load-bearing for every subsequent module** and move earlier. Retrofitting scope enforcement onto modules already built means auditing every query in the system.
+
+| Phase | Scope | Depends On |
+|---|---|---|
+| **Phase 0 — Foundation** | Repo scaffold, CI/CD, Docker Compose dev environment, migration tooling, base auth (local). **Permission catalogue seeded from manifest (7.3.5); Permission / PermissionSet / Role / UserRole / RolePermission tables; `applyScope()` helper; User.manager_id + reporting_path with cycle protection; append-only AuditLog** | — |
+| **Phase 1 — MVP (P0)** | Incident + Service Request ticketing with type conversion, status workflow, categorization, attachments, My Tickets self-service, email notifications, seeded default roles, **scope enforcement live on every query**, priority matrix, ticket merge (manual) | Phase 0 |
+| **Phase 2 (P1)** | Asset/CMDB linking, SLA/OLA engine + business calendars (with the two worked-example tests, Ref D3), Knowledge Base + suggestion-on-create, Service Catalog with dynamic forms, CSAT surveys, jobs/downloads tray | Phase 1 |
+| **Phase 3 (P2)** | Automation engine **with observability from day one** (execution logs, dry-run, auto-disable, cascade protection — Amendment A-002), Custom Fields engine, form rules, custom rules, report/dashboard builder, approval workflows, SSO/MFA, **user-level permission overrides, hierarchy scope, custom scopes, access-review report, and the permission explain tool (A-001)** | Phase 2 |
+| **Phase 4 (P2/P3)** | Problem Management + KEDB, Change Enablement + Change Calendar, duplicate/similarity detection (Ref F1), resolution memory (Ref F4 tier 2), inbound/outbound webhooks, email-to-ticket with loop protection | Phase 3 |
+| **Phase 5 (P3+)** | PWA polish + push, optional Tauri packaging, anomaly signals (Ref F6), pre-aggregated reporting tables, advanced compliance reporting, deferral-register review | Phase 4 |
+
+**Deferred throughout** (Amendment A-006): delegation, approval-gated permission grants, UC agreements, semantic search, LLM-assisted drafting, custom scripts unless properly sandboxed, native mobile, zero-downtime deployment. Each carries a stated trigger condition in the Functional Reference; the register is reviewed at every phase boundary.
 
 Each phase ends with a demo against this document's relevant Part, and any deviation is logged per Part XIV.
 
@@ -777,12 +983,7 @@ Each phase ends with a demo against this document's relevant Part, and any devia
 - **Integration tests:** API endpoints against a real test database (containerized Postgres), including RBAC enforcement tests (a Requester token must never succeed on an Admin-only endpoint).
 - **E2E tests:** critical user journeys (raise ticket → agent resolves → CSAT) via Playwright, run against a staging build in CI.
 - **Automation engine tests:** rule evaluation is pure-function testable — every Trigger/Condition/Action combination used in seed data must have a test.
-- **Security testing:** automated security scanning in CI plus periodic manual review of the RBAC matrix vs. Part V. Specifically:
-  - **SAST** on every pull request (fast pipeline scan, blocking on High and above) and a full policy scan on `main` and weekly.
-  - **SCA** — dependency vulnerability scanning, covering both the advisory feed and license posture.
-  - **Secret scanning** on every push.
-  - **DAST** — deferred until a hosted environment exists; it becomes a release gate at the cloud-hosting milestone, not before. See ADR-0014.
-  - A scan finding that is not a genuine defect is dismissed with a written mitigation rationale, never left unreviewed. A gate nobody trusts is worse than no gate.
+- **Security testing:** dependency vulnerability scanning in CI, periodic manual review of RBAC matrix vs. Part V.
 - **Seed data:** a fixture set (users across all roles, sample tickets in every status, sample assets) so every environment demoes identically.
 
 ---
@@ -799,22 +1000,24 @@ Each phase ends with a demo against this document's relevant Part, and any devia
 
 ## Appendix A — Glossary (ITIL 4 Terms)
 
-| Term              | Meaning                                                                                    |
-| ----------------- | ------------------------------------------------------------------------------------------ |
-| Incident          | An unplanned interruption to a service or reduction in quality                             |
-| Service Request   | A formal request for something to be provided (access, information, standard change)       |
-| Problem           | A cause, or potential cause, of one or more incidents                                      |
-| Known Error       | A problem that has a documented root cause and workaround                                  |
-| Change Enablement | The practice of managing risk when making changes to services                              |
-| CMDB              | Configuration Management Database — a store of configuration items and their relationships |
-| SLA               | Service Level Agreement — a target agreed with the customer/business                       |
-| OLA               | Operational Level Agreement — a target between internal teams                              |
-| CAB               | Change Advisory Board — group that reviews Normal changes                                  |
-| Major Incident    | A high-impact incident requiring a dedicated, expedited response                           |
+| Term | Meaning |
+|---|---|
+| Incident | An unplanned interruption to a service or reduction in quality |
+| Service Request | A formal request for something to be provided (access, information, standard change) |
+| Problem | A cause, or potential cause, of one or more incidents |
+| Known Error | A problem that has a documented root cause and workaround |
+| Change Enablement | The practice of managing risk when making changes to services |
+| CMDB | Configuration Management Database — a store of configuration items and their relationships |
+| SLA | Service Level Agreement — a target agreed with the customer/business |
+| OLA | Operational Level Agreement — a target between internal teams |
+| CAB | Change Advisory Board — group that reviews Normal changes |
+| Major Incident | A high-impact incident requiring a dedicated, expedited response |
 
-## Appendix B — Full Permission Matrix
+## Appendix B — Permission Catalogue
 
-_(To be maintained as a living table in the Admin > Roles UI once built — the abridged version in 5.2 is illustrative; the UI-generated matrix is the authoritative one going forward, per Article II.)_
+**Superseded by Amendment A-001.** The authoritative catalogue (~150 permissions across all modules, including transition-level gating) is **Functional Reference I2**. It is seeded from a versioned manifest in the repo (7.3.5), not maintained by hand, and reconciled on each release migration — new permissions are added disabled-by-default for existing custom roles so an upgrade never silently widens access.
+
+The role→permission matrix itself is generated by the Admin > Roles UI from live data (Article II). Do not maintain a static matrix in documentation; it will drift from the manifest within one release.
 
 ## Appendix C — Original Specification Cross-Reference
 
@@ -822,4 +1025,4 @@ This document is a superset of and fully preserves the original "In-House Suppor
 
 ---
 
-_End of document. This specification is the working constitution for development — treat any conflicting instruction encountered mid-build as a signal to raise an ADR, not to silently override this document._
+*End of document. This specification is the working constitution for development — treat any conflicting instruction encountered mid-build as a signal to raise an ADR, not to silently override this document.*

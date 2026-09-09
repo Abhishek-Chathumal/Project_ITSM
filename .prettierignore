@@ -1,0 +1,15 @@
+# Generated / vendored output
+dist
+build
+coverage
+node_modules
+package-lock.json
+
+# The two governing documents are authored outside this repo and replaced wholesale
+# when a new revision arrives. Prettier's table alignment and emphasis-marker
+# normalization change ~370 lines without changing a word, which would bury the real
+# diff of the next revision in reformatting noise. We never hand-edit these files, so
+# there is nothing for Prettier to keep tidy — keep them byte-identical to what the
+# maintainer supplied instead.
+docs/Support_Portal_Development_Constitution.md
+docs/Support_Portal_Functional_Reference.md

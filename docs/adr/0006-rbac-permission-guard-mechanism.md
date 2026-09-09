@@ -1,7 +1,14 @@
 # ADR-0006: RBAC via a single entity-agnostic PermissionGuard
 
-**Status:** Accepted
-**Relates to:** Constitution Part V.2 (RBAC Model), Article II (Configuration Over Code), Article III (Least Privilege)
+**Status:** Accepted, but **amended by [ADR-0017](0017-adopt-amendments-a001-a006.md)** — do not read this in isolation.
+**Relates to:** Constitution Part V.2, Article II (Configuration Over Code), Article III (Least Privilege)
+
+> **What changed.** Amendment A-001 replaced the two-layer role→permission model this ADR
+> describes with a three-layer one: roles, per-user grants/revocations, and a **scope attached
+> per permission**. The _mechanism_ below still stands — `SessionAuthGuard`, `PermissionGuard`,
+> `@RequirePermission`, and shared `PERMISSIONS` constants are unchanged. What no longer holds
+> is the assumption that holding a key is the whole authorization answer: scope is enforced
+> separately, once, in the data layer via `applyScope()`. See ADR-0017.
 
 ## Context
 

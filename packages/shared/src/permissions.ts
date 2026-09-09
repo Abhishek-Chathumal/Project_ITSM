@@ -26,8 +26,14 @@ export const PERMISSIONS = {
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
-/** Default system roles shipped out of the box (Part V.2). Editable/cloneable — never
- * hardcoded into authorization logic, only used to seed initial data. */
+/** Default system roles shipped out of the box. Duplicable — never hardcoded into
+ * authorization logic, only used to seed initial data.
+ *
+ * NOTE (ADR-0017): Amendment A-001 expands this to twelve seeded roles (Super Admin, Service
+ * Desk Technician, Request Specialist, Problem Specialist, Change Specialist, Team Lead,
+ * Change Manager, Knowledge Manager, Dashboard Viewer, Report Viewer, Auditor, Requester) and
+ * makes predefined roles **permission-locked** — membership editable, permission set not, so
+ * an admin cannot lock everyone out. Still to be applied; see Constitution 5.2. */
 export const DEFAULT_ROLES = [
   'Requester',
   'Technician',
