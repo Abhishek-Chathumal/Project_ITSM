@@ -393,10 +393,11 @@ locally rather than by any unit test.
   cannot be done from CI or by an agent. Until then, treat a red `sast-policy` as expected
   and read `sast-findings` instead. **Not yet done.**
 
-  **Right now it is failing for a second, unrelated reason, and this one needs a human.**
-  On 2026-09-09 two PRs (#12, #13) were merged ~50 seconds apart. Each push to `main`
-  starts a policy scan against the same Veracode application profile, and that profile
-  takes one build at a time, so the second submission was refused:
+  **It has also been failing for a second reason — the profile-collision — and that one is
+  now fixed in the workflow rather than in a human's memory.** It happened twice: PRs #12
+  and #13 merged ~50 seconds apart, then #15 and #16 ~90 seconds apart. Each push to `main`
+  starts a policy scan against the same Veracode application profile, which takes one build
+  at a time, so the second submission is refused:
 
   ```
   * App not in state where new builds are allowed.
@@ -405,14 +406,25 @@ locally rather than by any unit test.
     Veracode Platform and try again.
   ```
 
-  It does not clear on a re-run — attempt 2 failed identically. **Remedy:** delete the
-  incomplete scan in the Veracode Platform, then re-run the `security-scan` workflow on
-  `main`. After that the job should return to failing on `Did Not Pass`, which is the
-  documented disposition above. Until the profile is cleared, `sast-policy` is telling you
-  nothing about the code at all.
+  It does not clear on a re-run. **The cause was not simply "two merges close together".**
+  `security-scan.yml` had `concurrency.cancel-in-progress: true` for every event, so the
+  second push _cancelled_ the first — and on the #15/#16 occurrence the cancellation landed
+  64 seconds into the Veracode upload. A half-submitted build is exactly what strands a
+  profile. The workflow was configured to cause the failure the docs asked a human to avoid.
 
-  **To avoid repeating it:** let one `security-scan` run on `main` finish before merging the
-  next PR. Nothing else in CI cares, only this job.
+  Two changes fix it (PR #17):
+
+  - `cancel-in-progress: ${{ github.event_name == 'pull_request' }}` — PR runs still cancel
+    when superseded; pushes to `main` **queue** behind the one in flight. `sast-policy`
+    never runs on a `pull_request`, so cancelling a PR run can strand nothing.
+  - `deleteincompletescan: '1'` on the upload step, passed through to the Veracode Java
+    wrapper. It deletes a scan not in `Results Ready`, except one in `Pre-Scan Success` —
+    so the `Incomplete` state a cancelled upload leaves is covered, while a cleanly
+    pre-scanned build awaiting module selection is not. `1` rather than `2` for that reason.
+
+  Together: the first stops the stranding, the second recovers a profile already stranded
+  **without needing a human with Veracode platform access**. Until a run on `main` proves
+  the recovery, treat that as expected-to-work rather than confirmed.
 
 - **Two GitGuardian incidents may still read "Triggered"** in the dashboard (37100835, 37100836) from test fixtures committed and then removed while fixing ADR-0015. Both were
   invented values, never real credentials, so nothing needs rotating — but they should be
