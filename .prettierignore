@@ -5,6 +5,10 @@ coverage
 node_modules
 package-lock.json
 
+# Prisma 7 emits the client as TypeScript into the source tree. It is regenerated on
+# every build, so formatting it is both pointless and a moving target.
+apps/api/src/generated
+
 # The two governing documents are authored outside this repo and replaced wholesale
 # when a new revision arrives. Prettier's table alignment and emphasis-marker
 # normalization change ~370 lines without changing a word, which would bury the real

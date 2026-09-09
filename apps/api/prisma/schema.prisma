@@ -1,14 +1,26 @@
 generator client {
-  provider      = "prisma-client-js"
-  // "native" covers whatever host runs `prisma generate` (Windows/macOS/Linux dev
-  // machines, CI runners). The explicit Debian target is for the Docker images, so the
-  // correct engine is always present rather than depending on runtime OpenSSL detection.
-  binaryTargets = ["native", "debian-openssl-3.0.x"]
+  // Prisma 7's generator. `prisma-client-js` is gone, and `output` is mandatory: the
+  // client no longer lands in node_modules.
+  //
+  // It is generated into `src/` on purpose. That makes it ordinary build input — tsc
+  // emits it to `dist/generated/prisma` alongside everything else — so the runtime image
+  // gets it from the `dist` COPY it already does, and the fragile
+  // `COPY --from=build /repo/node_modules/.prisma` this replaced is simply deleted rather
+  // than repointed. It is gitignored; `prisma generate` recreates it.
+  //
+  // `binaryTargets` is deliberately absent. It configured the Rust query engine, which
+  // Prisma 7 does not have — queries now go through a driver adapter (@prisma/adapter-pg,
+  // wired up in PrismaService). That is what supersedes ADR-0009.
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
+  // No `url` here. Prisma 7 rejects it outright: the connection string for Migrate lives in
+  // the root `prisma.config.ts`, and the client gets its connection from the driver adapter
+  // passed to the PrismaClient constructor (see PrismaService). One less place for a
+  // connection string to be, which is the point.
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum UserStatus {

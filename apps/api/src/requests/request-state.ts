@@ -16,7 +16,7 @@
  * condition out by hand.
  */
 
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '../generated/prisma/client';
 
 /** The fields the predicate reads. Any ticket row satisfies it. */
 export interface OperationalStateFields {
