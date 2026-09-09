@@ -123,6 +123,13 @@ High-and-above gate, so PRs pass, but Veracode's policy counts it and returns
 mitigation on the finding in the Veracode platform, which needs a human with that role;
 until then the policy scan's verdict carries no signal.
 
+**Let one `security-scan` run on `main` finish before merging the next PR.** Every push to
+`main` starts a policy scan against the same Veracode application profile, and that profile
+accepts one build at a time. Merging two PRs a minute apart refuses the second with
+`App not in state where new builds are allowed`, and leaves the profile holding an
+`Incomplete` scan that a re-run will not clear — someone has to delete the failed scan in
+the Veracode Platform. Nothing else in CI is affected; jobs may run concurrently freely.
+
 **Read that job's log from the bottom, and mind what the last line is.** The failure is
 always `The policy status 'Did Not Pass' is not passing.` The line printed _after_ it,
 during `Complete job`, is a Node deprecation `##[warning]` naming
