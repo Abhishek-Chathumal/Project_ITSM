@@ -293,6 +293,28 @@ locally rather than by any unit test.
   Design, citing ADR-0015). Needs Veracode access and a human with the approver role, so it
   cannot be done from CI or by an agent. Until then, treat a red `sast-policy` as expected
   and read `sast-findings` instead. **Not yet done.**
+
+  **Right now it is failing for a second, unrelated reason, and this one needs a human.**
+  On 2026-09-09 two PRs (#12, #13) were merged ~50 seconds apart. Each push to `main`
+  starts a policy scan against the same Veracode application profile, and that profile
+  takes one build at a time, so the second submission was refused:
+
+  ```
+  * App not in state where new builds are allowed.
+    Scan status is Incomplete
+  * A scan has failed to complete successfully. Delete the failed scan from the
+    Veracode Platform and try again.
+  ```
+
+  It does not clear on a re-run — attempt 2 failed identically. **Remedy:** delete the
+  incomplete scan in the Veracode Platform, then re-run the `security-scan` workflow on
+  `main`. After that the job should return to failing on `Did Not Pass`, which is the
+  documented disposition above. Until the profile is cleared, `sast-policy` is telling you
+  nothing about the code at all.
+
+  **To avoid repeating it:** let one `security-scan` run on `main` finish before merging the
+  next PR. Nothing else in CI cares, only this job.
+
 - **Two GitGuardian incidents may still read "Triggered"** in the dashboard (37100835, 37100836) from test fixtures committed and then removed while fixing ADR-0015. Both were
   invented values, never real credentials, so nothing needs rotating — but they should be
   resolved as test fixtures so the dashboard keeps meaning something. The PR check itself is
