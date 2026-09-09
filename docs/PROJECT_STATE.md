@@ -209,7 +209,7 @@ locally rather than by any unit test.
 ## 4. Known debt
 
 - **Thin test coverage** — the guard spec, the exception-filter spec (added with ADR-0012),
-  and one component render test. The constitution (Part XIII) asks for integration tests
+  the config spec (added with ADR-0015), and one component render test. The constitution (Part XIII) asks for integration tests
   incl. RBAC enforcement and E2E journeys. **Still the largest gap.**
 - `Prisma 5.22` — an 8.x major exists. Upgrade deliberately, not incidentally; the CLI
   prints an upgrade notice on every `generate`.

@@ -111,7 +111,7 @@ jobs:
       - name: Prepare env file
         run: |
           cp .env.example .env
-          sed -i 's|^SESSION_SECRET=.*|SESSION_SECRET=ci-smoke-secret-not-for-real-use|' .env
+          sed -i 's|^SESSION_SECRET=.*|SESSION_SECRET=ci-smoke-secret-not-for-real-use-and-comfortably-over-the-length-floor|' .env
       - name: Start the stack
         run: docker compose up -d --build
       - name: Wait for the API to serve traffic
@@ -147,7 +147,7 @@ jobs:
       - name: Prepare env file
         run: |
           cp .env.example .env
-          sed -i 's|^SESSION_SECRET=.*|SESSION_SECRET=ci-smoke-secret-not-for-real-use|' .env
+          sed -i 's|^SESSION_SECRET=.*|SESSION_SECRET=ci-smoke-secret-not-for-real-use-and-comfortably-over-the-length-floor|' .env
       - name: Start the dev stack
         run: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
       - name: Wait for the API to serve traffic
