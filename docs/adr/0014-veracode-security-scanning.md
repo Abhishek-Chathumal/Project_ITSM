@@ -111,6 +111,14 @@ Worth keeping, because both failures were silent and both looked like success:
 - **SCA reported clean having read only the root `package.json`**: `Direct Libraries 0`,
   62 lines of code, against a workspace of four packages. `recursive: true` is required
   for npm workspaces.
+- **A deprecation warning outlives the job it is printed in, and reads like a cause.**
+  `sast-policy`'s log ends with a Node 20 `##[warning]` emitted during `Complete job` —
+  after the scan has completed and after the real failure line. Being last, it reads as the
+  reason the job failed; it is not, and never has been. `actions/upload-artifact` and
+  `actions/download-artifact` are pinned to `v7.0.1` / `v8.0.1` so they no longer appear in
+  it, but `veracode/veracode-uploadandscan-action@0.2.11` declares `using: node20` and is
+  the newest release Veracode ships, so the warning stays. Worth re-checking whenever that
+  action publishes a release; nothing else to do.
 - **The policy scan works, and disagrees with the PR gate by design.** Its first three runs
   on `main` all ended `Did Not Pass`, with the scan itself healthy (`Results Ready`, no
   error). The cause is the deliberate narrow gate this ADR chose: `sast-pipeline` blocks on

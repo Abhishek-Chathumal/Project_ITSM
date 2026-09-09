@@ -123,6 +123,15 @@ High-and-above gate, so PRs pass, but Veracode's policy counts it and returns
 mitigation on the finding in the Veracode platform, which needs a human with that role;
 until then the policy scan's verdict carries no signal.
 
+**Read that job's log from the bottom, and mind what the last line is.** The failure is
+always `The policy status 'Did Not Pass' is not passing.` The line printed _after_ it,
+during `Complete job`, is a Node deprecation `##[warning]` naming
+`veracode/veracode-uploadandscan-action@0.2.11` — which is a warning, is emitted after the
+scan already finished, and has never failed anything. It is the last line in the log and so
+reads like the cause; it is not. `0.2.11` is the newest release Veracode publishes and it
+still declares `using: node20`, so the warning stays until they ship a Node 24 build. Every
+action we control runs `node24`.
+
 ## Hard-won gotchas — do not regress these
 
 Each of these was a real production-blocking bug. They're fixed; keep them fixed.
