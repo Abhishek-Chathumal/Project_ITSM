@@ -108,11 +108,15 @@ Login page plus a protected app shell, rebuilt in a ServiceOps-inspired language
   `docker-compose.dev.yml` (Vite + `nest start --watch`, bind-mounted source).
 - CI jobs: `lint`, `typecheck`, `test`, `build`, `smoke`, `smoke-dev` (+ GitGuardian),
   on `actions/checkout@v7` / `setup-node@v7` and Node 22.
+- `security-scan.yml` (ADR-0014): `preflight`, `package`, `sast-pipeline` (PR gate, High
+  and above), `sast-policy` (`main` + weekly), `sca`. Every run publishes the full findings
+  as a `sast-findings` artifact for 30 days, sub-gate ones included. **`sast-policy` is
+  knowingly red** — see §4.
 - The API runtime image is a production-only install (`prod-deps` stage, ADR-0011); the
   dev stack masks every workspace `node_modules` with a named volume (gotcha 7).
-- Tests: `PermissionGuard` and `AllExceptionsFilter` unit tests (api); login page render,
-  `SideNav` permission gating, `DropdownMenu` keyboard/focus behaviour, `StatTile`
-  loading-vs-zero and `initialsOf` (web) — 20 web tests, up from 1. **Still no
+- Tests: `PermissionGuard`, `AllExceptionsFilter` and `configuration` unit tests (api, 23);
+  login page render, `SideNav` permission gating, `DropdownMenu` keyboard/focus behaviour,
+  `StatTile` loading-vs-zero and `initialsOf` (web) — 20 web tests, up from 1. **Still no
   integration or E2E coverage; that remains Phase 1 work.**
 
 ---
@@ -176,6 +180,40 @@ stack, in both themes, at rail and expanded widths.
 What was deliberately **not** built: the Tickets list and ticket-detail screens. Those
 belong with the Phase 1 backend, and the primitives they need are now in place.
 
+### Making the scanners tell the truth (2026-09-09)
+
+Two rounds, both about a gate being trustworthy rather than merely green.
+
+**The findings became reviewable** (PR #9). The SAST job uploaded only
+`filtered_results.json` — the findings above the fail threshold, an empty array — so
+everything below the gate lived in a job log that ages out. `results.json` is now published
+for 30 days. That is what turned "the policy scan says Did Not Pass while every PR is
+green" from a mystery into a line number.
+
+**The one finding it exposed was real** (PR #10, ADR-0015). CWE-259 pointed at
+`sessionSecret`'s fallback, which signs session cookies _and_ seeds CSRF tokens — so an
+unset `SESSION_SECRET` meant forgeable sessions and a bypassable CSRF check, and nothing
+failed to say so. The live path was worse than the code: `docker-compose.yml` ran
+`NODE_ENV=production` while supplying the `.env.example` placeholder itself, which is 33
+characters, so neither a presence nor a length check would have caught it. Fixed in two
+layers — the config factory refuses missing/blank/placeholder/short secrets in production
+(a throw inside `NestFactory.create`, before a port is bound), and compose stopped
+defaulting the value. Verified by running it: compose errors at interpolation, and the
+built API exits 1 on the placeholder before any DB connection.
+
+Two things worth remembering from it:
+
+- **The Medium did not clear, and the ADR was corrected to say so.** CWE-259 simply
+  retargets to the remaining dev-only literal. It is dismissed under Part XIII rather than
+  chased, because clearing it outright means a random-per-boot dev secret that breaks the
+  local login on most edits. §4 records the platform mitigation that would actually clear it.
+- **GitGuardian caught a test fixture in the fix's own first push**: a 42-character
+  high-entropy string is indistinguishable from a leaked credential, and a `sh0rt-but-secret`
+  value assigned to `SESSION_SECRET` reads as entropy too. Both fixtures are now generated
+  or plain words — fixed in the code, not by adding a scanner ignore rule. Because
+  GitGuardian scans every commit in a PR, the branch had to be squashed to remove the
+  literal from its history; a follow-up commit does not clear it.
+
 ### Bugs found and fixed (all caught by running it for real, not by tests)
 
 1. **`/auth/me` and `/auth/login` returned different shapes** — `me` returned the internal
@@ -209,8 +247,9 @@ locally rather than by any unit test.
 ## 4. Known debt
 
 - **Thin test coverage** — the guard spec, the exception-filter spec (added with ADR-0012),
-  the config spec (added with ADR-0015), and one component render test. The constitution (Part XIII) asks for integration tests
-  incl. RBAC enforcement and E2E journeys. **Still the largest gap.**
+  the config spec (added with ADR-0015), and one component render test. The constitution
+  (Part XIII) asks for integration tests incl. RBAC enforcement and E2E journeys.
+  **Still the largest gap.**
 - `Prisma 5.22` — an 8.x major exists. Upgrade deliberately, not incidentally; the CLI
   prints an upgrade notice on every `generate`.
 - **Middleware-level rejections carry no `requestId`** in the response body, because
@@ -224,9 +263,17 @@ locally rather than by any unit test.
   full tree. The vite/vitest/esbuild advisories fixed in the dependency pass sat entirely
   in that dev-only region and **would not have been caught**. A free `npm audit` job in
   `ci.yml` is what closes this. **Not yet done.**
-- The Veracode **policy scan** (`sast-policy`) is still unvalidated — it only runs on
-  `main` and the weekly schedule, so its first real execution happens after this branch
-  merges. The pipeline scan and SCA are verified working (see below).
+- **`sast-policy` fails on `main`, by a disposition rather than by neglect — and so its
+  verdict is currently worthless as a signal.** It is now validated: it runs, completes
+  (`Results Ready`), and returns `Did Not Pass` on one Medium — CWE-259 against the
+  deliberate dev-only `SESSION_SECRET` fallback at `configuration.ts:15`. That Medium is
+  below the High-and-above PR gate, so `sast-pipeline` passes and PRs are unaffected.
+  Dismissed under Part XIII with the rationale in ADR-0015.
+  **The follow-up that actually clears it:** approve a mitigation on the finding in the
+  Veracode platform (the app's latest static scan → the CWE-259 finding → Mitigate by
+  Design, citing ADR-0015). Needs Veracode access and a human with the approver role, so it
+  cannot be done from CI or by an agent. Until then, treat a red `sast-policy` as expected
+  and read `sast-findings` instead. **Not yet done.**
 
 ### Resolved since Phase 0
 
@@ -237,6 +284,14 @@ locally rather than by any unit test.
 - ~~No `.dockerignore`~~ — added; keeps `.env` and `.git` out of the build context.
 - ~~Build tooling shipped in the runtime image~~ — a `prod-deps` stage cut the API image
   from 1.01 GB to 537 MB. See ADR-0011.
+- ~~**A missing `SESSION_SECRET` booted anyway on a fallback baked into the source**~~ —
+  production now refuses to boot on a missing, blank, placeholder or under-32-character
+  secret, and `docker-compose.yml` no longer supplies a default (it previously handed the
+  production stack the `.env.example` placeholder). See ADR-0015.
+  ⚠️ **Breaking for any deployment that relied on that compose default** — it will now stop
+  at interpolation until given a real secret. Rotating the secret invalidates live sessions,
+  so everyone re-authenticates once. Development is unaffected: the stable fallback remains,
+  so a local login survives watch-mode reloads.
 
 ---
 

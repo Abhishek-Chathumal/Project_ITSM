@@ -106,7 +106,13 @@ Rejected alternatives:
   reachability. Clearing it outright would mean the random-per-boot dev secret rejected
   above, trading a real maintainer cost for a scanner's satisfaction.
 
-  So the policy scan on `main` may continue to report "Did Not Pass" on this one Medium.
-  That is now a known disposition with a rationale attached, not an unexplained red — but it
-  does mean the policy scan's verdict is not a usable signal while this stands. Worth
-  revisiting if Veracode's dismissal workflow lets the finding be annotated at the source.
+  **Confirmed after merge:** `sast-policy` on `main` ended `Did Not Pass` on exactly this
+  Medium, with the scan itself healthy. So this is a known disposition with a rationale
+  attached rather than an unexplained red — but the policy scan's verdict is not a usable
+  signal while it stands, and `sast-findings` is what to read instead.
+
+  Writing the rationale here satisfies Part XIII's intent but does not reach Veracode, which
+  still counts the finding against policy. **The step that actually clears it** is approving
+  a mitigation on the finding in the Veracode platform (latest static scan → the CWE-259
+  finding → Mitigate by Design, citing this ADR). That needs platform access and an approver
+  role, so it can be done neither from CI nor by an agent. Tracked in PROJECT_STATE §4.

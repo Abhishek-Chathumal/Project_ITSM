@@ -111,7 +111,17 @@ A separate `security-scan.yml` runs Veracode SAST (pipeline scan on PRs, blockin
 and above; full policy scan on `main` and weekly) and SCA — see ADR-0014. Every job is
 gated on its secret being present and skips cleanly when it isn't, so it never blocks an
 unconfigured environment. It triggers on `pull_request`, **never `pull_request_target`** —
-the repo is public, and the latter would expose the credentials to fork PRs.
+the repo is public, and the latter would expose the credentials to fork PRs. Each run
+publishes the complete findings as a `sast-findings` artifact for 30 days, sub-gate ones
+included, because a finding only in a job log cannot be reviewed later (Part XIII).
+
+**`sast-policy` is expected to be red on `main`, and that is not a regression.** One
+Medium (CWE-259, the deliberate dev-only `SESSION_SECRET` fallback) sits below the
+High-and-above gate, so PRs pass, but Veracode's policy counts it and returns
+`Did Not Pass`. It is dismissed under Part XIII with the rationale in ADR-0015 — do not
+"fix" it by weakening a gate or deleting the check. Clearing it for real means approving a
+mitigation on the finding in the Veracode platform, which needs a human with that role;
+until then the policy scan's verdict carries no signal.
 
 ## Hard-won gotchas — do not regress these
 

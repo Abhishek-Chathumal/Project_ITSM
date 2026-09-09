@@ -37,7 +37,8 @@ git config --global user.email "acwellage@gmail.com"
 
 # 4. Recreate what git doesn't carry
 copy .env.example .env
-#    → then edit .env and set a real SESSION_SECRET
+#    → then edit .env and set a real SESSION_SECRET (the placeholder works for
+#      local dev; a production stack refuses to boot on it — see ADR-0015)
 
 # 5. Run it (this also migrates + seeds the database)
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
