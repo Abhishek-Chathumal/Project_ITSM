@@ -27,9 +27,23 @@ on:
     - cron: '17 3 * * 1'
   workflow_dispatch:
 
+# Cancel superseded PR runs, but NEVER a run on `main`.
+#
+# `sast-policy` submits a build to a Veracode application profile that accepts one build at
+# a time, and cancelling that job mid-upload leaves the profile holding an `Incomplete`
+# scan. Every later run then fails with `App not in state where new builds are allowed`,
+# and it does not clear on a re-run. That has happened twice: once by merging PRs #12 and
+# #13 a minute apart, and again when merging #15 and #16 90 seconds apart — the second
+# time caused by this very setting killing an upload 64 seconds in.
+#
+# With `cancel-in-progress` false for pushes, a second push to `main` QUEUES behind the
+# first instead of cancelling it. That turns the "let one security-scan finish before
+# merging the next PR" rule from something a human has to remember into something the
+# workflow enforces. PR runs are unaffected: `sast-policy` never runs on a pull_request,
+# so cancelling one can strand nothing.
 concurrency:
   group: security-scan-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -235,6 +249,16 @@ jobs:
           # profile even while it is pre-production.
           criticality: 'High'
           scantimeout: 60
+          # Self-heal a profile that is already stranded. Passed straight through to the
+          # Veracode Java wrapper as `-deleteincompletescan 1`: delete a scan that is not
+          # in `Results Ready`, except one in `Pre-Scan Success`. `Incomplete` — the state
+          # a cancelled upload leaves behind — is covered; a scan that pre-scanned cleanly
+          # and is waiting on module selection is not, which is why this is 1 and not 2.
+          #
+          # The concurrency change above is what stops the stranding happening; this is the
+          # backstop for when it already has, so recovery does not need a human with
+          # Veracode platform access.
+          deleteincompletescan: '1'
 
   # Agent-based SCA: a different advisory database from npm's, plus license data and
   # reachability analysis. Runs against the repository source, so it needs no artifact.

@@ -124,12 +124,19 @@ High-and-above gate, so PRs pass, but Veracode's policy counts it and returns
 mitigation on the finding in the Veracode platform, which needs a human with that role;
 until then the policy scan's verdict carries no signal.
 
-**Let one `security-scan` run on `main` finish before merging the next PR.** Every push to
-`main` starts a policy scan against the same Veracode application profile, and that profile
-accepts one build at a time. Merging two PRs a minute apart refuses the second with
-`App not in state where new builds are allowed`, and leaves the profile holding an
-`Incomplete` scan that a re-run will not clear — someone has to delete the failed scan in
-the Veracode Platform. Nothing else in CI is affected; jobs may run concurrently freely.
+**Runs on `main` serialize themselves now — don't undo that.** Every push to `main` starts
+a policy scan against the same Veracode application profile, and that profile accepts one
+build at a time. Two merges close together used to refuse the second with
+`App not in state where new builds are allowed` and strand the profile on an `Incomplete`
+scan that no re-run would clear. That happened twice (PRs #12/#13, then #15/#16) before the
+cause was understood: `concurrency.cancel-in-progress` was `true` for every event, so the
+second push _cancelled_ the first mid-upload, which is precisely what strands a profile.
+
+`cancel-in-progress` is now `${{ github.event_name == 'pull_request' }}`. PR runs still
+cancel when superseded; pushes to `main` queue instead. `deleteincompletescan: '1'` on the
+upload step clears a profile that is already stranded, so recovery no longer needs a human
+with Veracode platform access. Nothing else in CI is affected; other jobs run concurrently
+freely.
 
 **Read that job's log from the bottom, and mind what the last line is.** The failure is
 always `The policy status 'Did Not Pass' is not passing.` The line printed _after_ it,
