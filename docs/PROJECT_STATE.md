@@ -23,13 +23,23 @@ see §4b.
 already knows the stack, conventions, and gotchas. You do **not** need to re-explain the
 project. A resume prompt can be as short as:
 
-> Continuing Project_ITSM. Read `docs/PROJECT_STATE.md` for current state, then let's
-> start Phase 1 with <whatever you want>.
+> Continuing Project_ITSM. Read `docs/PROJECT_STATE.md` §4b for what's in flight, then
+> let's start <whatever you want>.
+
+Note the phase numbering shifted: **Amendment A-001 re-opened Phase 0**, so "start Phase 1"
+is no longer the right instruction — see §4b.
 
 **First, orient on anything in flight**, which no document can state without going stale:
 `git status && git log --oneline -5` for where the tree is, and `gh pr list` for open PRs
-(a session may be resuming with work already up for review). Then read §4 — known debt is
-where the unfinished business lives, and each item says whether it blocks anything.
+(a session may be resuming with work already up for review).
+
+Then read, in this order:
+
+1. **§4b — In flight.** What is half-built, what is superseded, and the next concrete unit of
+   work. Start here; it is the shortest path to being useful.
+2. **§4 — Known debt.** Each item says whether it blocks anything.
+3. **§3 — History**, only if you need the reasoning behind something that looks odd. Most of
+   it is there because a plausible-looking alternative failed in a way that cost a day.
 
 Key documents, in the order a newcomer should read them:
 
@@ -107,12 +117,18 @@ Two migrations exist: `20260908054618_init` and `20260909043500_ticketing`.
 
 ### Seeded data (`apps/api/prisma/seed.ts`, idempotent upserts)
 
+> ⚠️ **All of this identity seed data is superseded by Amendment A-001** and will be replaced
+> in Phase 0 Slice 0a/0d: the hand-maintained key list becomes a versioned manifest of the
+> ~150-entry catalogue (Ref I2, `module.action[.qualifier]`), and the six roles become twelve
+> permission-locked ones. It is described here as _what currently runs_, not as a target.
+
 - **6 roles** (all `isSystemRole`): Requester, Technician, Team Lead, Change Manager,
   Admin, Auditor.
 - **10 permissions**: `role.manage`, `permission.view`, `user.manage`,
   `department.manage`, `automation.manage`, `report.view.org`, `audit.view`,
   `org_settings.manage`, plus forward-declared `ticket.view.own` and
-  `ticket.edit.assigned` for Phase 1.
+  `ticket.edit.assigned` — the two ticket keys are the ones A-001 collapses into a single
+  scoped `request.view` / `request.edit`.
 - **Grants**: Admin gets all 10; Auditor gets `audit.view` + `report.view.org`;
   Requester / Technician / Team Lead / Change Manager get **zero** — this is the
   data-level proof of Article III, not an oversight.
@@ -711,10 +727,14 @@ constitution assumed admin-only user creation:
 - Additional **login options** / changes to the login process.
 - **Self-service account creation** and/or **bulk user import**.
 - **Account activation and email verification** flows.
-- **Custom permission creation/definition** by admins — note the design tension: permission
-  keys are currently referenced in code via `@RequirePermission(...)`, so admin-invented
-  keys can't gate routes that don't exist. Needs a deliberate design (e.g. scoping custom
-  permissions to data-level rules or custom fields/workflows) — bring options, don't guess.
+- ~~**Custom permission creation/definition** by admins~~ — **answered by Amendment A-001.**
+  The old tension was that a key invented by an admin gates nothing, because keys are
+  referenced in code. A-001 resolves it by not requiring invented keys: the catalogue is
+  fixed but comprehensive (~150 entries, Ref I2) and admins compose roles and permission sets
+  from it, while what they genuinely author is **scope** — per-user grants/revocations and
+  named reusable custom scopes evaluated at query time by `applyScope()`. Transition-level
+  gating (Ref I2.9) covers the rest. Catalogue and `applyScope()` are Phase 0; overrides and
+  custom scopes are Phase 3.
 - **Cloud hosting** once the app is usable for real work.
 
 ### Standing constraints

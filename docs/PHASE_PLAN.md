@@ -213,10 +213,13 @@ RBAC enforcement, plus one E2E journey (raise → assign → resolve) in Playwri
 
 ### Phase 1 exit criteria
 
-- [ ] A Requester can raise a ticket and track it end to end in the browser
+- [ ] A Requester can raise a request and track it end to end in the browser
 - [ ] A Technician can pick it up, comment, and resolve it
-- [ ] RBAC scoping is proven by tests, not assumed
+- [ ] **Scope enforcement is live on every query** and runs through `applyScope()` — the
+      Part XII wording for Phase 1, and the reason A-001 pulled it into Phase 0
+- [ ] Scoping is proven by tests, not assumed — including the null-department case
 - [ ] Attachments work and are access-controlled
+- [ ] Internal notes never reach a payload the requester can read
 - [ ] Notifications fire and failures are visible
 - [ ] Both smoke jobs green; `PROJECT_STATE.md` updated
 

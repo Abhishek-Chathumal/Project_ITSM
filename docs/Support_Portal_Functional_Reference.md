@@ -1,6 +1,6 @@
 # Support Portal — Functional, Administration & Customization Reference
 
-**Companion to:** _Support_Portal_Development_Constitution.md_
+**Companion to:** *Support_Portal_Development_Constitution.md*
 **Version:** 3.0
 **Framework baseline:** ITIL 4 (with ITIL Version 5 forward-compatibility notes)
 **Reference implementation studied:** Motadata ServiceOps
@@ -66,19 +66,19 @@ ITIL 4 replaced ITIL v3's process-centric lifecycle with a value-centric operati
 
 **The seven guiding principles, and what each obliges this build to do:**
 
-| Guiding principle                      | Concrete obligation in this system                                                                                                   |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| **Focus on value**                     | Every metric surfaced must answer a question someone acts on. No vanity dashboards.                                                  |
-| **Start where you are**                | Ship with seeded defaults (statuses, priorities, SLAs, roles, categories) so nobody configures from an empty screen.                 |
-| **Progress iteratively with feedback** | CSAT, article feedback, and automation execution logs are feedback channels — built in Phases 1–3, not "later".                      |
+| Guiding principle | Concrete obligation in this system |
+|---|---|
+| **Focus on value** | Every metric surfaced must answer a question someone acts on. No vanity dashboards. |
+| **Start where you are** | Ship with seeded defaults (statuses, priorities, SLAs, roles, categories) so nobody configures from an empty screen. |
+| **Progress iteratively with feedback** | CSAT, article feedback, and automation execution logs are feedback channels — built in Phases 1–3, not "later". |
 | **Collaborate and promote visibility** | Audit trails, work logs, watchers, collaborators, and the shared change calendar. Automation actions must appear in the audit trail. |
-| **Think and work holistically**        | One ticket object, one automation engine, one notification system — never per-module reimplementations.                              |
-| **Keep it simple and practical**       | The anti-gimmick rule. A feature needing a paragraph of justification probably shouldn't ship.                                       |
-| **Optimize and automate**              | Optimize the process first, then automate. Automation over a broken workflow just breaks faster.                                     |
+| **Think and work holistically** | One ticket object, one automation engine, one notification system — never per-module reimplementations. |
+| **Keep it simple and practical** | The anti-gimmick rule. A feature needing a paragraph of justification probably shouldn't ship. |
+| **Optimize and automate** | Optimize the process first, then automate. Automation over a broken workflow just breaks faster. |
 
-**The four dimensions** map onto: _Organizations & People_ → roles, groups, departments (G3); _Information & Technology_ → data model and integrations (B, M); _Partners & Suppliers_ → vendor/UC handling (D1); _Value Streams & Processes_ → the workflow engine (E).
+**The four dimensions** map onto: *Organizations & People* → roles, groups, departments (G3); *Information & Technology* → data model and integrations (B, M); *Partners & Suppliers* → vendor/UC handling (D1); *Value Streams & Processes* → the workflow engine (E).
 
-**Service Value Chain activities and where they live:** _Engage_ → self-service portal and multi-channel intake; _Deliver & Support_ → Incident and Request modules; _Improve_ → Problem management, CSAT, reporting; _Design & Transition_ → Change enablement. _Plan_ and _Obtain/Build_ sit outside a support portal's remit.
+**Service Value Chain activities and where they live:** *Engage* → self-service portal and multi-channel intake; *Deliver & Support* → Incident and Request modules; *Improve* → Problem management, CSAT, reporting; *Design & Transition* → Change enablement. *Plan* and *Obtain/Build* sit outside a support portal's remit.
 
 ## A2. ITIL Version 5 — Direction of Travel
 
@@ -93,27 +93,27 @@ ITIL 4 replaced ITIL v3's process-centric lifecycle with a value-centric operati
 
 ## A3. Practice-to-Module Map
 
-| ITIL 4 practice                  | Module   | Phase   | Notes                                                                |
-| -------------------------------- | -------- | ------- | -------------------------------------------------------------------- |
-| Incident Management              | C1       | P0      | Core                                                                 |
-| Service Request Management       | C2       | P0      | Core, with Service Catalog                                           |
-| Service Desk                     | C1+C2+J1 | P0      | Realized through modules, not a separate module                      |
-| Knowledge Management             | C5       | P1      | Deflection engine                                                    |
-| Service Level Management         | D        | P1      | SLA/OLA                                                              |
-| Service Configuration Management | B, G7    | P1      | Lightweight CMDB: linking only                                       |
-| Problem Management               | C3       | P2      |                                                                      |
-| Change Enablement                | C4       | P2      | Light-touch                                                          |
-| Continual Improvement            | K        | P2      | Via reporting, CSAT, problem trends                                  |
-| Monitoring & Event Management    | M5       | P3      | Integration hook only — we consume events, we don't monitor          |
-| Workforce & Talent Management    | G3       | Partial | Only assignment-relevant parts: groups, support levels, availability |
-| Supplier Management              | D1 (UC)  | Partial | We record vendor commitments; we don't manage suppliers              |
-| Information Security Management  | I        | P0→     | Built into the system, not a module                                  |
+| ITIL 4 practice | Module | Phase | Notes |
+|---|---|---|---|
+| Incident Management | C1 | P0 | Core |
+| Service Request Management | C2 | P0 | Core, with Service Catalog |
+| Service Desk | C1+C2+J1 | P0 | Realized through modules, not a separate module |
+| Knowledge Management | C5 | P1 | Deflection engine |
+| Service Level Management | D | P1 | SLA/OLA |
+| Service Configuration Management | B, G7 | P1 | Lightweight CMDB: linking only |
+| Problem Management | C3 | P2 | |
+| Change Enablement | C4 | P2 | Light-touch |
+| Continual Improvement | K | P2 | Via reporting, CSAT, problem trends |
+| Monitoring & Event Management | M5 | P3 | Integration hook only — we consume events, we don't monitor |
+| Workforce & Talent Management | G3 | Partial | Only assignment-relevant parts: groups, support levels, availability |
+| Supplier Management | D1 (UC) | Partial | We record vendor commitments; we don't manage suppliers |
+| Information Security Management | I | P0→ | Built into the system, not a module |
 
 ## A4. ITIL Practices Deliberately Not Implemented
 
 Most of the 34 practices are organizational disciplines, not software features; building modules for them is exactly the bloat this project avoids.
 
-**Not implemented:** Strategy Management · Portfolio Management · Architecture Management · Project Management · Risk Management as a register (change-level risk _is_ captured) · Financial Management · Measurement & Reporting as a discipline (reports themselves exist) · Organizational Change Management · Service Continuity · Capacity & Performance Management · Availability Management · IT Asset Management full lifecycle · Deployment & Release Management · Software Development & Management · Infrastructure & Platform Management · Service Validation & Testing · Service Design · Business Analysis · Relationship Management.
+**Not implemented:** Strategy Management · Portfolio Management · Architecture Management · Project Management · Risk Management as a register (change-level risk *is* captured) · Financial Management · Measurement & Reporting as a discipline (reports themselves exist) · Organizational Change Management · Service Continuity · Capacity & Performance Management · Availability Management · IT Asset Management full lifecycle · Deployment & Release Management · Software Development & Management · Infrastructure & Platform Management · Service Validation & Testing · Service Design · Business Analysis · Relationship Management.
 
 Any of these entering scope later arrives through an ADR, not quiet absorption.
 
@@ -123,41 +123,41 @@ Any of these entering scope later arrives through an ADR, not quiet absorption.
 
 ## B1. Vocabulary
 
-| Term                     | Meaning in this build                                                                                                     |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| **Request**              | The umbrella record. Subtypes **Incident** and **Service Request**. One table, one detail page, one `type` discriminator. |
-| **Incident**             | Unplanned interruption or quality reduction. Goal: restore service.                                                       |
-| **Service Request**      | Planned, standard, often pre-approved ask. Goal: fulfil a need.                                                           |
-| **Problem**              | Cause of one or more incidents. Goal: permanent elimination.                                                              |
-| **Change**               | Planned addition/modification/removal affecting services. Goal: controlled risk.                                          |
-| **Task**                 | A unit of work inside a ticket (or standalone), separately assignable.                                                    |
-| **Requester**            | End user raising tickets.                                                                                                 |
-| **Technician**           | Agent working tickets.                                                                                                    |
-| **Technician Group**     | A team a ticket can be assigned to; a technician may belong to several.                                                   |
-| **Support Level (Tier)** | Technician attribute used for escalation and assignment filtering.                                                        |
-| **Source**               | Channel the ticket arrived through. Metadata on the ticket, never a separate data path. `Source is changed` is a trigger. |
-| **Watcher**              | User subscribed to a ticket's activity without owning it.                                                                 |
-| **Collaborator**         | Tracked participant beyond requester and assignee.                                                                        |
-| **Scenario**             | A saved bundle of actions a technician fires manually on a ticket.                                                        |
-| **Workflow**             | An automated trigger → logic → action process.                                                                            |
-| **Form Rule**            | Conditional field behaviour on a form.                                                                                    |
-| **Custom Rule**          | A compliance gate blocking a transition unless conditions are met.                                                        |
-| **Service Model**        | A state-transition model auto-advancing status when conditions match.                                                     |
+| Term | Meaning in this build |
+|---|---|
+| **Request** | The umbrella record. Subtypes **Incident** and **Service Request**. One table, one detail page, one `type` discriminator. |
+| **Incident** | Unplanned interruption or quality reduction. Goal: restore service. |
+| **Service Request** | Planned, standard, often pre-approved ask. Goal: fulfil a need. |
+| **Problem** | Cause of one or more incidents. Goal: permanent elimination. |
+| **Change** | Planned addition/modification/removal affecting services. Goal: controlled risk. |
+| **Task** | A unit of work inside a ticket (or standalone), separately assignable. |
+| **Requester** | End user raising tickets. |
+| **Technician** | Agent working tickets. |
+| **Technician Group** | A team a ticket can be assigned to; a technician may belong to several. |
+| **Support Level (Tier)** | Technician attribute used for escalation and assignment filtering. |
+| **Source** | Channel the ticket arrived through. Metadata on the ticket, never a separate data path. `Source is changed` is a trigger. |
+| **Watcher** | User subscribed to a ticket's activity without owning it. |
+| **Collaborator** | Tracked participant beyond requester and assignee. |
+| **Scenario** | A saved bundle of actions a technician fires manually on a ticket. |
+| **Workflow** | An automated trigger → logic → action process. |
+| **Form Rule** | Conditional field behaviour on a form. |
+| **Custom Rule** | A compliance gate blocking a transition unless conditions are met. |
+| **Service Model** | A state-transition model auto-advancing status when conditions match. |
 
 **Critical modelling decision.** Incident and Service Request share one table with a type discriminator, and **conversion between them is a first-class operation** — the reference product exposes `Converted To Incident` and `Converted To Service Request` as trigger events. Misclassification at intake is routine; build conversion in Phase 1.
 
 ## B2. Field Groups on a Request
 
-| Group              | Fields                                                                                                                          |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| **Identity**       | ID, Subject, Description (rich text), Type, Source, Tags                                                                        |
-| **Classification** | Category (multi-level), Impact, Urgency, Priority, Support Level                                                                |
-| **Ownership**      | Requester, Assignee, Technician Group, Department, Location, Watchers, Collaborators                                            |
-| **Time**           | Created At, First Response Due, Resolution Due (Due By), First Responded At, Resolved At, Closed At, Estimated Time, Time Spent |
-| **Resolution**     | Diagnosis, Solution, Resolution Notes, Closure Code                                                                             |
-| **Linkage**        | Linked Assets/CIs, Linked Problem, Linked Change, Merge Parent/Children, Tasks, Approvals, Attachments                          |
-| **Escalation**     | Response Escalation Level, Resolution Escalation Level                                                                          |
-| **Audit**          | Audit trail, work logs, conversation threads                                                                                    |
+| Group | Fields |
+|---|---|
+| **Identity** | ID, Subject, Description (rich text), Type, Source, Tags |
+| **Classification** | Category (multi-level), Impact, Urgency, Priority, Support Level |
+| **Ownership** | Requester, Assignee, Technician Group, Department, Location, Watchers, Collaborators |
+| **Time** | Created At, First Response Due, Resolution Due (Due By), First Responded At, Resolved At, Closed At, Estimated Time, Time Spent |
+| **Resolution** | Diagnosis, Solution, Resolution Notes, Closure Code |
+| **Linkage** | Linked Assets/CIs, Linked Problem, Linked Change, Merge Parent/Children, Tasks, Approvals, Attachments |
+| **Escalation** | Response Escalation Level, Resolution Escalation Level |
+| **Audit** | Audit trail, work logs, conversation threads |
 
 **Escalation is a level counter, not a boolean.** Both response and resolution escalation levels are ticket fields incrementing as escalation progresses, and both are trigger events. A `breached` boolean cannot express "escalated twice, now with the team lead".
 
@@ -176,11 +176,11 @@ Example: Urgency = Medium, Impact = On Business → Priority = High.
 
 ## B4. Classification Hierarchies
 
-| Hierarchy      | Depth                                         | Purpose                                                                                                                                     |
-| -------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Category**   | Multi-level (`Category > Subcategory > Item`) | Routing, reporting, KB matching                                                                                                             |
-| **Department** | Up to 5 levels                                | Ticket/user classification, workflow conditions, requester groups, department-scoped reports and business hours                             |
-| **Location**   | N-level                                       | Geographic classification — and **doubles as a security filter**: technicians of one location can be restricted to that location's requests |
+| Hierarchy | Depth | Purpose |
+|---|---|---|
+| **Category** | Multi-level (`Category > Subcategory > Item`) | Routing, reporting, KB matching |
+| **Department** | Up to 5 levels | Ticket/user classification, workflow conditions, requester groups, department-scoped reports and business hours |
+| **Location** | N-level | Geographic classification — and **doubles as a security filter**: technicians of one location can be restricted to that location's requests |
 
 All three are self-referencing trees. Implement once with a shared tree helper (materialized path) plus a configurable depth guard — not three bespoke implementations. All three support **bulk import**, **reordering**, and use as automation conditions.
 
@@ -201,7 +201,6 @@ One endpoint: `POST /requests/bulk` with `ids[]`, `action`, `payload`.
 **Actions:** Update common fields · Merge · Claim · Assign · Resolve · Close · Mark as Spam · Archive · Restore · Delete (archived only) · Add Solution · Set Status / Priority / Urgency / Impact / Category / Location / Source / Department · Attach File · Add Tags.
 
 **Safety requirements — these matter more than the feature itself:**
-
 - **Permission-checked per record**, not once per batch. Selecting 200 tickets affects only those the user may edit; the response reports succeeded / skipped / failed with reasons.
 - **Transactional per record, not per batch** — one failure must not roll back 199 successes.
 - **Individual audit entries** per affected ticket, tagged with a shared `bulk_operation_id` so the batch can be reviewed as a unit.
@@ -229,18 +228,18 @@ One endpoint: `POST /requests/bulk` with `ids[]`, `action`, `payload`.
 
 ### C1.3 Capabilities
 
-| Capability                 | Behaviour                                                                                                                                                                    |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Merge**                  | Fold duplicates into a primary. Produces `Marked as Primary Merged Request` / `Marked as Secondary Merged Request`, both trigger events. Detection: F1.                      |
-| **Split**                  | One ticket containing several distinct issues becomes several, each inheriting requester and source.                                                                         |
-| **Tasks**                  | Sub-work assignable to other technicians/teams (C6).                                                                                                                         |
-| **Asset/CI linking**       | Attach the affected item; the technician then sees that item's full incident and change history — a documented, substantial diagnosis accelerator.                           |
-| **Work logs**              | Time-tracked internal entries, distinct from user-visible replies.                                                                                                           |
-| **Conversation threading** | Public replies vs internal notes, visually distinct and permission-separated.                                                                                                |
-| **Watchers**               | Notify interested technicians who don't own the ticket.                                                                                                                      |
-| **Collaboration**          | Add participants beyond requester/assignee; `Collaboration is added` is a trigger.                                                                                           |
-| **Audit trail**            | Every action, immutable, including automation-driven ones.                                                                                                                   |
-| **Major Incident**         | Distinct expedited handling: escalation path, named coordinator, proactive broadcast (portal announcement banner), mandatory post-incident review creating a linked Problem. |
+| Capability | Behaviour |
+|---|---|
+| **Merge** | Fold duplicates into a primary. Produces `Marked as Primary Merged Request` / `Marked as Secondary Merged Request`, both trigger events. Detection: F1. |
+| **Split** | One ticket containing several distinct issues becomes several, each inheriting requester and source. |
+| **Tasks** | Sub-work assignable to other technicians/teams (C6). |
+| **Asset/CI linking** | Attach the affected item; the technician then sees that item's full incident and change history — a documented, substantial diagnosis accelerator. |
+| **Work logs** | Time-tracked internal entries, distinct from user-visible replies. |
+| **Conversation threading** | Public replies vs internal notes, visually distinct and permission-separated. |
+| **Watchers** | Notify interested technicians who don't own the ticket. |
+| **Collaboration** | Add participants beyond requester/assignee; `Collaboration is added` is a trigger. |
+| **Audit trail** | Every action, immutable, including automation-driven ones. |
+| **Major Incident** | Distinct expedited handling: escalation path, named coordinator, proactive broadcast (portal announcement banner), mandatory post-incident review creating a linked Problem. |
 
 ### C1.4 Boundary Rules
 
@@ -266,29 +265,27 @@ Encode as UX guidance and validation — these are the distinctions users get wr
 
 A catalog item is **not just a form**. This is the most valuable structure to replicate: it makes each service independently governable without code.
 
-| Dimension               | Behaviour                                                                                                                                                                                                                                                                                 |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Form**                | Drag-and-drop builder over two palettes: **Custom Fields** (addable, renamable, removable, duplicable) and **System Fields** (addable/removable, **not renamable**; once placed, removed from the palette so they can't be duplicated). Fields reorderable, width expandable/collapsible. |
-| **Workflow**            | Template-specific automation running **in parallel with** global workflows — both fire, each evaluating its own conditions. Design for concurrency, not override.                                                                                                                         |
-| **SLA**                 | Template-specific SLA that **replaces** the system SLA for this template's tickets. Note the asymmetry with Workflow: SLA overrides, workflow parallels.                                                                                                                                  |
-| **Approval Workflow**   | Template-specific chain. The generic admin-level approval workflow does **not** apply to service-item requests — the template's does.                                                                                                                                                     |
-| **Tasks**               | Pre-defined tasks in **up to 15 sequential stages**; a stage must complete before the next activates. Manually added tasks don't disturb this thread. One stage visible at a time. This is how "New Employee Onboarding" fans out across IT, HR, and facilities.                          |
-| **Scenario**            | Manually-triggered action bundles specific to this service, with conditions and access levels.                                                                                                                                                                                            |
-| **Service Model**       | A **state-transition model**: From-State → To-State pairs with condition groups that auto-advance status (e.g. Open → In Progress when an assignee is set). One model per service.                                                                                                        |
-| **Form Rules**          | Conditional field logic (H2).                                                                                                                                                                                                                                                             |
-| **Email Notifications** | Template-specific set, selected from global active notifications then individually editable.                                                                                                                                                                                              |
-| **Custom Rules**        | Compliance gates (H4) — e.g. block Resolved with no technician assigned.                                                                                                                                                                                                                  |
-| **Print Template**      | Rich-text print layouts with placeholder insertion, separately definable for Technician Portal and Support Portal.                                                                                                                                                                        |
+| Dimension | Behaviour |
+|---|---|
+| **Form** | Drag-and-drop builder over two palettes: **Custom Fields** (addable, renamable, removable, duplicable) and **System Fields** (addable/removable, **not renamable**; once placed, removed from the palette so they can't be duplicated). Fields reorderable, width expandable/collapsible. |
+| **Workflow** | Template-specific automation running **in parallel with** global workflows — both fire, each evaluating its own conditions. Design for concurrency, not override. |
+| **SLA** | Template-specific SLA that **replaces** the system SLA for this template's tickets. Note the asymmetry with Workflow: SLA overrides, workflow parallels. |
+| **Approval Workflow** | Template-specific chain. The generic admin-level approval workflow does **not** apply to service-item requests — the template's does. |
+| **Tasks** | Pre-defined tasks in **up to 15 sequential stages**; a stage must complete before the next activates. Manually added tasks don't disturb this thread. One stage visible at a time. This is how "New Employee Onboarding" fans out across IT, HR, and facilities. |
+| **Scenario** | Manually-triggered action bundles specific to this service, with conditions and access levels. |
+| **Service Model** | A **state-transition model**: From-State → To-State pairs with condition groups that auto-advance status (e.g. Open → In Progress when an assignee is set). One model per service. |
+| **Form Rules** | Conditional field logic (H2). |
+| **Email Notifications** | Template-specific set, selected from global active notifications then individually editable. |
+| **Custom Rules** | Compliance gates (H4) — e.g. block Resolved with no technician assigned. |
+| **Print Template** | Rich-text print layouts with placeholder insertion, separately definable for Technician Portal and Support Portal. |
 
 ### C2.3 Approvals — full specification
 
 **Two categories:**
-
 - **Manual** — technician creates an ad-hoc approval and picks the approver. Permission-gated. For non-standard requests needing stakeholder input.
 - **Automatic** — condition-matched workflow selects the chain when approval is requested.
 
 **Structure:**
-
 - Multiple **stages**, each with its own approver set
 - Approvers are **individuals** or a **requester group** (all members become approvers)
 - Each stage is **Unanimous** (all must approve, else rejected) or **Majority** (≥50% approve → approved; remaining approvers become irrelevant)
@@ -297,23 +294,22 @@ A catalog item is **not just a form**. This is the most valuable structure to re
 
 **Edge cases — build these; they are where approval systems break:**
 
-| Case                           | Required behaviour                                                                                                                                                |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sole approver deleted          | Approval no longer required                                                                                                                                       |
-| One approver removed mid-chain | That level is skipped; proceeds to next                                                                                                                           |
-| Final approver deleted         | Previous level's approver becomes final                                                                                                                           |
-| **Referred Back**              | First-class state distinct from Pending/Approved/Rejected: "I need more information before deciding"                                                              |
-| Ignore / Delete approval       | Permission-gated (`Ignore Approval`, `Delete Approval`); **both unavailable once an approver has acted**                                                          |
-| Pre-approval / Skip            | Marks approved without routing; pre-approved items don't appear in the Approvals tab. **Guard: only permitted if no active approval workflow's conditions match** |
-| Approver inaction              | Reminder cadence, then auto-reroute to an alternate after timeout — requests must never stall silently                                                            |
-| Re-initiation after rejection  | Prior entries **marked Archived, not deleted** — decision history preserved                                                                                       |
+| Case | Required behaviour |
+|---|---|
+| Sole approver deleted | Approval no longer required |
+| One approver removed mid-chain | That level is skipped; proceeds to next |
+| Final approver deleted | Previous level's approver becomes final |
+| **Referred Back** | First-class state distinct from Pending/Approved/Rejected: "I need more information before deciding" |
+| Ignore / Delete approval | Permission-gated (`Ignore Approval`, `Delete Approval`); **both unavailable once an approver has acted** |
+| Pre-approval / Skip | Marks approved without routing; pre-approved items don't appear in the Approvals tab. **Guard: only permitted if no active approval workflow's conditions match** |
+| Approver inaction | Reminder cadence, then auto-reroute to an alternate after timeout — requests must never stall silently |
+| Re-initiation after rejection | Prior entries **marked Archived, not deleted** — decision history preserved |
 
 **Design principle.** Approvals are **optional by default**; technicians can work and close tickets without one. Where approval must be mandatory, enforce it with a **Custom Rule** (H4) on the specific transition rather than making approval mandatory in the core flow. This keeps the common path fast and the controlled path controlled.
 
 ### C2.4 Catalog Governance
 
 Catalog sprawl is the documented failure mode. Mitigations that are features rather than wishes:
-
 - **Per-item usage analytics** (requests raised, last requested, average fulfilment time, CSAT) on the catalog admin list, so unused items are visibly unused
 - **Enable/disable per item** without deletion, so retirement is reversible
 - **[Defer]** scheduled "catalog health" report — worth building once the catalog exceeds roughly 30 items
@@ -321,28 +317,23 @@ Catalog sprawl is the documented failure mode. Mitigations that are features rat
 ## C3. Problem Management
 
 ### C3.1 Trigger Modes
-
 - **Reactive** — a spike of similar incidents, or major incident fallout
 - **Proactive** — trend analysis identifying weaknesses before incidents occur
 
 ### C3.2 Lifecycle
-
 Identification → Categorization → Prioritization → **Analysis** (RCA; a **workaround** may be published to the KEDB while investigation continues) → **Resolution** (typically via a linked Change) → Closure (solution documented to the knowledge base; linked incidents updated).
 
 ### C3.3 Distinct Fields
-
 `Symptoms` · `Investigation-Impact` · `Workaround` · `Root Cause` · `Solution` · `Known Error` (boolean) · `Nature of Problem` · `Business Service`
 
 **Do not collapse Workaround and Solution.** The documented anti-pattern is mistaking a workaround for a resolution. Separate fields — plus a Custom Rule requiring Root Cause and Solution before closure — make the distinction structural rather than cultural.
 
 ### C3.4 Known Error Database
-
 A problem flagged as Known Error carries a documented workaround that **auto-surfaces to technicians on matching incidents** (F3). This is the highest-value automation in the product: it converts investigation time into a lookup.
 
 Automation can also **auto-create a problem when a threshold of similar incidents is reached** — see F1 for the clustering method, and F1.4 for why this must be a suggestion rather than a silent creation.
 
 ### C3.5 Roles & KPIs
-
 Roles: Problem Manager (process owner) · Problem Analyst/Coordinator (day-to-day RCA) · Technical SMEs (per investigation).
 
 KPIs: reduction in recurring incidents (**the primary signal**) · Known Errors created · average time to identify root cause · open problem backlog.
@@ -350,7 +341,6 @@ KPIs: reduction in recurring incidents (**the primary signal**) · Known Errors 
 ## C4. Change Enablement
 
 ### C4.1 Three Types
-
 - **Standard** — low-risk, pre-approved, template-driven, often catalog-originated. Submission & Planning → Implementation → Review & Closure. Largely automatable.
 - **Normal** — requires assessment and **CAB** approval before scheduling.
 - **Emergency** — expedited approval; mandatory post-implementation review.
@@ -365,23 +355,19 @@ Two behaviours to copy exactly:
 - **Rejection re-entry.** A rejected change restarts from Submitted; on re-initiation prior approval entries are **marked Archived, not deleted**, preserving decision history.
 
 ### C4.3 Required Fields
-
 Risk level · Impact · Change Type · Change Reason · **Rollout Plan** · **Backout Plan** · Target Environment · Schedule Start/End · Rollout Start/End · Change Manager · Change Implementer · Change Reviewer · linked Assets/CIs · originating Incident/Problem.
 
 **A change with no backout plan is incomplete, not merely risky** — enforce with a Custom Rule on the transition into Approval.
 
 ### C4.4 Change Calendar
-
 Shared visual schedule of upcoming and in-flight changes, surfacing conflicts and blackout windows before collision. Filterable by team, risk, and type. One of the few genuinely valuable calendar views in ITSM: it prevents a specific, expensive class of incident.
 
 ### C4.5 KPIs
-
 Change success rate (implemented without causing an incident) · count of unauthorized/emergency changes (**a high number means the standard path is too slow — a process signal, not a system failure**) · change lead time · open RFC backlog.
 
 ## C5. Knowledge Management
 
 ### C5.1 Article Lifecycle
-
 `Draft → Review/Approval → Published → (Scheduled) Expiry/Archive`, with **full version history and revert**.
 
 ### C5.2 Capabilities
@@ -403,7 +389,6 @@ A knowledge base decays unless authoring is a byproduct of resolution. Three che
 3. **Usage and feedback analytics per article** — views, insertions, deflections (article viewed and no ticket subsequently raised in that session), helpfulness ratio. High views with low helpfulness identifies articles to fix. This is a sort on a table, not an analytics platform.
 
 ### C5.4 Cross-Module Integration
-
 - **Incident** — suggest on creation; link to ticket; create article from solution
 - **Problem** — document root causes, known errors, permanent solutions
 - **Change** — attach implementation plans, backout procedures, post-change docs
@@ -429,11 +414,11 @@ Tasks are units of work inside a ticket (or standalone), separately assignable, 
 
 ## D1. Three Agreement Types
 
-| Type    | Between                       | Purpose                                                                                                |
-| ------- | ----------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **SLA** | Provider ↔ requester/business | The visible commitment: response time, resolution time, escalation on breach                           |
+| Type | Between | Purpose |
+|---|---|---|
+| **SLA** | Provider ↔ requester/business | The visible commitment: response time, resolution time, escalation on breach |
 | **OLA** | Internal team ↔ internal team | Internal handoffs making the SLA achievable (e.g. Network diagnoses within 2h so the desk can meet 6h) |
-| **UC**  | Provider ↔ external vendor    | Vendor commitments underpinning the SLA (e.g. hardware replaced within 24h)                            |
+| **UC** | Provider ↔ external vendor | Vendor commitments underpinning the SLA (e.g. hardware replaced within 24h) |
 
 Implement SLA and OLA as one table with a `scope` discriminator. **[Defer] UC** until vendor contracts are formally tracked — for a small in-house desk it is usually a spreadsheet concern, and building it early adds a module nobody opens.
 
@@ -454,7 +439,7 @@ The due date is the target duration added to creation time, **computed against t
 Two worked examples from the reference documentation, both of which should become unit tests:
 
 - **24×7 group, Low priority, 7-day target.** Created 1 Jan 10:00 → due **8 Jan 10:00**. All hours count.
-- **Mon–Fri, 10:00–19:00 with a 1-hour lunch, Low priority, 7-day target.** Created 1 Jan 10:00 → due **10 Jan 18:00**. Weekends and lunch breaks are excluded, so seven _working_ days spans more calendar days — and because the target is expressed in days rather than hours, the due timestamp lands at **end of working day**, not at the literal 10:00 offset.
+- **Mon–Fri, 10:00–19:00 with a 1-hour lunch, Low priority, 7-day target.** Created 1 Jan 10:00 → due **10 Jan 18:00**. Weekends and lunch breaks are excluded, so seven *working* days spans more calendar days — and because the target is expressed in days rather than hours, the due timestamp lands at **end of working day**, not at the literal 10:00 offset.
 
 **Implementation.** Build a `BusinessCalendar` service handling working hours, breaks, holidays, and timezone, exposing `addWorkingDuration(start, duration, calendar)`. The second example above is precisely what catches a naive implementation.
 
@@ -509,7 +494,7 @@ This is the most reused subsystem in the product. SLA escalation, auto-assignmen
 
 ## E2. Five Building Blocks
 
-1. **Triggers** — define _when/why_; emit structured output data downstream nodes consume.
+1. **Triggers** — define *when/why*; emit structured output data downstream nodes consume.
 2. **References** — pass and transform data from earlier nodes or related records into later nodes (e.g. `Trigger > priorityId > id`). This is what makes workflows contextual rather than static, and it is the piece most often omitted from home-grown rule engines.
 3. **Expressions** — an **Expression Builder** for conditions, calculations, and transforms using operators, functions, and variables, with design-time validation. Conditions authored either in a simple **Condition tab** or an advanced **Expression tab**.
 4. **Flow-control nodes** — E4.
@@ -564,13 +549,13 @@ flowchart TD
 
 ## E4. Flow-Control Nodes
 
-| Node        | Behaviour                                                                                                                                                                                 |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **If/Else** | Conditional branching on static or referenced values                                                                                                                                      |
-| **Branch**  | Multi-path conditional split                                                                                                                                                              |
-| **Wait**    | Pause for a dynamic duration, or until a specific date/time                                                                                                                               |
-| **Merge**   | Synchronize parallel paths. Configurable **Merge Type** (e.g. `Wait For Any`), **Maximum Wait Based On** (e.g. Calendar Hours), **Maximum Wait Duration**, with a **Success output** path |
-| **Loop**    | Iterate over a list of items                                                                                                                                                              |
+| Node | Behaviour |
+|---|---|
+| **If/Else** | Conditional branching on static or referenced values |
+| **Branch** | Multi-path conditional split |
+| **Wait** | Pause for a dynamic duration, or until a specific date/time |
+| **Merge** | Synchronize parallel paths. Configurable **Merge Type** (e.g. `Wait For Any`), **Maximum Wait Based On** (e.g. Calendar Hours), **Maximum Wait Duration**, with a **Success output** path |
+| **Loop** | Iterate over a list of items |
 
 **A merge that can time out needs an explicit non-success path.** Do not model merges as always-succeeding joins; the timeout branch is where "the approval never came back" gets handled.
 
@@ -597,23 +582,18 @@ Automation is only as expressive as its trigger list. This is the **required eve
 > **Documented exception to replicate:** requests created via **bulk import** do **not** fire workflows. Without this carve-out, importing 5,000 historical tickets sends 5,000 assignment emails. Make the exception explicit and configurable, and surface it in the import UI so the admin knows automation was skipped.
 
 ### Problem Triggers (delta from Request)
-
 Symptoms is updated · Workaround is updated · Root Cause is updated · Investigation-Impact is updated · Known Error is changed · Nature Of Problem is changed · Business Service is changed · Problem is created/archived
 
 ### Change Triggers (delta from Request)
-
 Change Risk is changed · Change Type is changed · Change Reason is changed · Rollout Plan is updated · Backout Plan is updated · Planning-Impact is updated · Target Environment is changed · Schedule Start/End Date is changed · Rollout Start/End Date is changed · Change Manager / Implementer / Reviewer is changed · Change is created/archived
 
 ### Task Triggers
-
 Task is created/archived · Task Status / Priority / Type / Assignee / User Group is changed · Task Start/End Date is changed · Subject/Description is changed
 
 ### User Triggers (needed for onboarding/offboarding automation — see F5)
-
 User is created/archived · User Login · User Logout · User is Blocked / Unblocked / Restored · Converted to Technician · Converted to Requester · Marked as Verified User · Availability Status is changed · Do Not Disturb is changed · Department / Location / Contact No. / Logon Name / Name is changed
 
 ### Asset/CI Triggers (support-portal-relevant subset only)
-
 Asset is created/archived · Status is changed · Used By updated · Managed By / Managed By Group is changed · Location is changed · Asset Condition is changed · Warranty Expiration Date is changed · Business Service is changed · CI is created/archived · CI Type / CI Group / Name is changed
 
 ## E6. Worked Example — the canonical routing workflow
@@ -654,7 +634,7 @@ Step 7 is the acceptance criterion: **automation actions must be visible in the 
 - On a new ticket, first compare candidates by **count of assigned tickets at equal-or-higher priority** than the new one; fewest wins.
 - **Tie-break on lowest total load.**
 
-_Worked example from the documentation:_ T1 load 60, T2 load 21, T3 load 28. A new **High** priority ticket arrives. Higher-or-equal-priority counts: T1=3, T2=1, T3=1. T2 and T3 tie on count, so lower total load wins → **assigned to T2**.
+*Worked example from the documentation:* T1 load 60, T2 load 21, T3 load 28. A new **High** priority ticket arrives. Higher-or-equal-priority counts: T1=3, T2=1, T3=1. T2 and T3 tie on count, so lower total load wins → **assigned to T2**.
 
 - **Recalculation policy (important for resource use):** load recalculates for a technician when a ticket is created/assigned or a technician is added/removed. Other affected technicians recalculate only if their load has not been updated **in the last 10 minutes** — a deliberate debounce. Copy this; naive recalculation of every technician on every ticket event is a real performance problem at even modest volume.
 - Only **actively assigned** tickets count toward load (see B5 exclusions).
@@ -668,25 +648,24 @@ _Worked example from the documentation:_ T1 load 60, T2 load 21, T3 load 28. A n
 
 ## E8. Other Automation Surfaces
 
-| Surface                        | Purpose                                                                                                                                                                                                                                                                                            |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Scenario**                   | Manually-triggered action bundle a technician runs on a ticket via an Execute button. Configurable **Technician Access Level** and **Technician Group Access Level** so not every agent can run every scenario. For standardized multi-step responses that still need human judgement to initiate. |
-| **Request/Incident Schedules** | Periodically create tickets from a template (weekly server health check, monthly access review).                                                                                                                                                                                                   |
-| **Task Schedules**             | The same for standalone tasks.                                                                                                                                                                                                                                                                     |
-| **Custom Script**              | Scripts running on Request/Change forms on create/edit, and invocable from form rules via `Run Custom Script`. **Security-critical — see I7.**                                                                                                                                                     |
-| **Response Templates**         | Canned replies with placeholder insertion and optional attachments, selectable while replying; individually enable/disable-able. **Placeholders come from a fixed system list; users cannot invent new ones** — enforce that, since free-form placeholder syntax is an injection surface.          |
-| **Notification Templates**     | Per-event, per-channel (email, SMS, in-app), with placeholder insertion, individually activatable. SMS templates have no subject line.                                                                                                                                                             |
+| Surface | Purpose |
+|---|---|
+| **Scenario** | Manually-triggered action bundle a technician runs on a ticket via an Execute button. Configurable **Technician Access Level** and **Technician Group Access Level** so not every agent can run every scenario. For standardized multi-step responses that still need human judgement to initiate. |
+| **Request/Incident Schedules** | Periodically create tickets from a template (weekly server health check, monthly access review). |
+| **Task Schedules** | The same for standalone tasks. |
+| **Custom Script** | Scripts running on Request/Change forms on create/edit, and invocable from form rules via `Run Custom Script`. **Security-critical — see I7.** |
+| **Response Templates** | Canned replies with placeholder insertion and optional attachments, selectable while replying; individually enable/disable-able. **Placeholders come from a fixed system list; users cannot invent new ones** — enforce that, since free-form placeholder syntax is an injection surface. |
+| **Notification Templates** | Per-event, per-channel (email, SMS, in-app), with placeholder insertion, individually activatable. SMS templates have no subject line. |
 
 ## E9. Automation Observability (non-negotiable)
 
 An automation engine nobody can debug becomes an automation engine nobody trusts, and then nobody uses.
 
 **Required:**
-
 - **Execution log** per workflow run: workflow, version, trigger event, target record, each node's outcome, final result, duration, error message on failure. Retained for a configurable window (30 days default), then rolled up to counts.
 - **Per-workflow health view**: runs, success rate, average duration, last failure — visible on the workflow list, not buried.
 - **Failure alerting to admins** (Constitution Article VII: fail safe, not silent). A workflow failing repeatedly must raise a visible admin notification, and after a configurable consecutive-failure threshold should **auto-disable itself** rather than continue failing silently against every ticket.
-- **Dry-run/test mode** — evaluate a workflow against a chosen existing ticket and show what _would_ happen, without side effects. This single feature prevents most production automation accidents.
+- **Dry-run/test mode** — evaluate a workflow against a chosen existing ticket and show what *would* happen, without side effects. This single feature prevents most production automation accidents.
 - **Loop protection** — an automation that updates a field which re-triggers the same automation must be detected and broken. Track a per-record automation-depth counter within a single event cascade; abort past a configurable depth (default 10) and log it loudly. Without this, one badly configured rule can generate unbounded work.
 
 ---
@@ -700,7 +679,6 @@ An automation engine nobody can debug becomes an automation engine nobody trusts
 ## F1. Duplicate & Similar Ticket Detection (ticket merging)
 
 ### F1.1 The problem worth solving
-
 When a shared service breaks, twenty people raise twenty tickets. Twenty technicians then investigate the same fault. Detection at intake collapses that into one investigation.
 
 ### F1.2 Method — PostgreSQL only, no external service
@@ -714,13 +692,11 @@ Combine three cheap signals into a score:
 Score = weighted sum, weights admin-configurable, with two thresholds: **suggest** and **strongly suggest**. Nothing merges automatically.
 
 ### F1.3 Where it surfaces
-
 - **Requester, at creation** — "Others have reported something similar" with a link to follow the existing ticket instead of raising a new one. This is deflection, and the cheapest ticket is the one never created.
 - **Technician, on the ticket** — a "Possible duplicates" panel listing candidates with the match reason ("same subject terms, same linked asset, within 2 hours") and a one-click **Merge** action.
 - **Bulk triage** — during a major incident, select all candidates and merge into the primary in one action (B6).
 
 ### F1.4 Why merging must never be automatic
-
 A wrong automatic merge destroys a distinct customer's issue inside someone else's ticket, and the requester experiences it as being ignored. That failure is expensive and hard to detect. **Suggest always; merge on human confirmation only.** The same logic applies to auto-creating a Problem from clustered incidents (C3.4): propose it to the Problem Manager, don't spawn records silently.
 
 ### F1.4a Detection and merge flow — visual
@@ -754,7 +730,6 @@ flowchart TD
 **The dashed edge is the important one.** Nothing on this diagram merges or creates records without human confirmation — a wrong auto-merge buries a distinct issue inside someone else's ticket, and the requester experiences it as being ignored.
 
 ### F1.5 Resource cost
-
 One indexed full-text query plus one structural query per ticket creation, scoped to a time window. On a small-organization corpus this is single-digit milliseconds. No background training, no additional service.
 
 ## F2. Intelligent Routing
@@ -764,7 +739,6 @@ Covered algorithmically in E7. The "intelligence" here is **priority-weighted lo
 **Optional refinement, cheap and genuinely useful:** **category-affinity routing**. Maintain a rolling counter of `(technician, category) → resolved count, median resolution time` over a trailing window. When candidates tie under Smart Balance, prefer the technician with demonstrated affinity for that category. This is one aggregate table updated on resolution — no model, no training — and it converts an arbitrary tie-break into a competence-informed one.
 
 **Guard rails that keep this from becoming unfair:**
-
 - Affinity is a **tie-break only**, never a primary criterion — otherwise the person who once fixed a printer becomes the permanent printer person.
 - Cap the affinity bonus so it cannot override workload balance.
 - Make the affinity table **visible to team leads**, since it is also a skills-gap report.
@@ -772,18 +746,15 @@ Covered algorithmically in E7. The "intelligence" here is **priority-weighted lo
 ## F3. Knowledge Deflection & Contextual Suggestion
 
 ### F3.1 Requester-side (highest value in the system)
-
 As the requester types a subject, surface matching published, publicly-visible knowledge articles — keyed off subject keywords via the same full-text index used in F1. Debounce input (roughly 300ms) and cap results at three to five.
 
 **Measure the outcome, or the feature is faith-based.** Log article-viewed-during-creation, and whether a ticket was subsequently submitted in that session. The ratio is the deflection rate, and it is the number that justifies knowledge investment.
 
 ### F3.2 Technician-side
-
 On an open ticket, surface: matching knowledge articles, **matching Known Errors with documented workarounds** (C3.4), and similar resolved tickets with their solutions. One-click insert into the reply, which also increments article usage (C5.3).
 
 ### F3.3 Method
-
-The same PostgreSQL full-text index, ranked, filtered by visibility scope and the requester's permissions. **[Defer]** semantic/vector search until the knowledge base exceeds several hundred articles _and_ measurement shows keyword search is genuinely missing matches — the infrastructure cost is real and the benefit at small corpus sizes is not.
+The same PostgreSQL full-text index, ranked, filtered by visibility scope and the requester's permissions. **[Defer]** semantic/vector search until the knowledge base exceeds several hundred articles *and* measurement shows keyword search is genuinely missing matches — the infrastructure cost is real and the benefit at small corpus sizes is not.
 
 ## F4. Troubleshooting Assistance
 
@@ -798,7 +769,6 @@ Three tiers, deliberately in increasing order of cost. Build tier 1 and 2; treat
 ## F5. Intelligent User Handling
 
 ### F5.1 Lifecycle automation
-
 The User trigger set (E5) makes user lifecycle automation possible without a separate module:
 
 - **Onboarding** — `User is created` fires a Service Request from an onboarding catalog template, spawning staged tasks across teams (C2.2).
@@ -807,19 +777,15 @@ The User trigger set (E5) makes user lifecycle automation possible without a sep
 - **Requester → Technician conversion** — assigns the configured default role (G3) and triggers technician onboarding tasks.
 
 ### F5.2 Requester context on the ticket
-
 Show, on every ticket, information the technician would otherwise go looking for: the requester's department, location, assigned assets, open ticket count, and recent ticket history. This is a join, not an inference — and it is the difference between a technician asking "what laptop do you have?" and already knowing.
 
 ### F5.3 VIP / sensitivity handling
-
 Rather than a hardcoded VIP flag, use **user custom fields plus workflow conditions** (H1, E5). Any user attribute becomes a routing or SLA condition. This keeps a politically sensitive concept configurable and auditable rather than embedded in code.
 
 ### F5.4 Duplicate-user prevention
-
 On user creation and LDAP/SCIM sync, match on email and on normalized name plus department, and warn on likely duplicates. Duplicate user records fragment ticket history, which quietly degrades every other feature in this part.
 
 ### F5.5 Availability-aware assignment
-
 `Availability Status` and `Do Not Disturb` are user fields and trigger events; `Consider only Logged-in Technicians` is an auto-assignment flag (E7.1). Together these prevent the classic failure of assigning an urgent ticket to someone on leave. **[Defer]** full leave-calendar integration until there is an HR system to integrate with.
 
 ## F6. Anomaly and Trend Signals
@@ -837,15 +803,15 @@ Cheap statistics that answer real questions, all computable as scheduled aggrega
 
 Applies to everything in Part F:
 
-| Requirement      | Implementation                                                                                                                                                                                          |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Explainable**  | Every suggestion displays its reason ("matched on subject terms and linked asset, within 2 hours")                                                                                                      |
-| **Overridable**  | Every suggestion can be dismissed; dismissal is recorded                                                                                                                                                |
-| **Logged**       | Suggestion shown, accepted, or dismissed — all auditable, enabling measurement of whether the feature actually helps                                                                                    |
-| **Configurable** | Thresholds and weights are admin settings, not constants in code                                                                                                                                        |
-| **Disableable**  | Each intelligent feature has an independent on/off switch                                                                                                                                               |
-| **Bounded**      | No intelligent feature may take an irreversible action (merge, close, delete) without human confirmation                                                                                                |
-| **Measured**     | Acceptance rate per feature is reported. A suggestion feature accepted under ~20% of the time is noise and should be retuned or removed — and this is the review that keeps the system honest over time |
+| Requirement | Implementation |
+|---|---|
+| **Explainable** | Every suggestion displays its reason ("matched on subject terms and linked asset, within 2 hours") |
+| **Overridable** | Every suggestion can be dismissed; dismissal is recorded |
+| **Logged** | Suggestion shown, accepted, or dismissed — all auditable, enabling measurement of whether the feature actually helps |
+| **Configurable** | Thresholds and weights are admin settings, not constants in code |
+| **Disableable** | Each intelligent feature has an independent on/off switch |
+| **Bounded** | No intelligent feature may take an irreversible action (merge, close, delete) without human confirmation |
+| **Measured** | Acceptance rate per feature is reported. A suggestion feature accepted under ~20% of the time is noise and should be retuned or removed — and this is the review that keeps the system honest over time |
 
 ---
 
@@ -866,29 +832,23 @@ Organize as a **flat, searchable grid of top-level tiles**, not a nested tree, w
 ## G1. Organization Settings
 
 ### G1.1 Account Details
-
 Company name, email, contact number, employee count, registered address, description, website, **timezone**, base currency, plus multi-currency support where needed.
 
 Timezone is load-bearing: it is the default for business-hours calendars, report boundaries, and every displayed timestamp. Store all timestamps in UTC; render in the user's timezone where set, falling back to the organization's.
 
 ### G1.2 Branding
-
 Logo, colour theme, portal name, favicon, email header/footer. Applied via CSS custom properties at runtime so theming requires no rebuild. Support portal branding is configurable independently of the technician console.
 
 ### G1.3 Departments
-
 Hierarchical to **five levels**. Supports add, edit, delete, **bulk import**, and **reorder**. Departments classify tickets, assets, and users; act as workflow conditions; define requester groups; scope reports; and can carry **their own business hours**.
 
 **Deletion guard:** a department in use by users, tickets, or automation conditions must not hard-delete. Offer deactivate-and-reassign instead, and show the usage count before the action.
 
 ### G1.4 Locations
-
 **N-level** hierarchy, assignable to users and tickets. Beyond classification, locations act as a **security filter** — technicians of one location can be restricted to that location's requests (see I3). This dual role means location changes have access-control consequences and must be audited.
 
 ### G1.5 Business Hours
-
 Two categories:
-
 - **24×7** — no breaks or weekly offs; the team is always operational.
 - **Custom** — office shifts, breaks, weekly offs, and **public holidays**.
 
@@ -897,21 +857,17 @@ Each calendar carries a name, description, and **timezone**. Separate working ho
 **Requirements:** annual holiday sets should be copyable year to year (nobody wants to re-enter 25 holidays each January), and a calendar in use by an active SLA policy must warn before edit — changing a calendar silently changes every live due date computed from it.
 
 ### G1.6 Priority, Impact, Urgency Value Sets
-
 Admin-manageable value lists feeding the priority matrix (B3). Each carries a name, display order, and colour used consistently across list views, badges, and reports. Deleting a value in use requires remapping.
 
 ### G1.7 System Preferences
-
 Application accessibility toggle (enables the font-size control, J2) · date/time display format · default landing page per role · session and idle timeouts (I5) · attachment size and permitted MIME types (I6) · data retention windows per entity (I9).
 
 ### G1.8 Privacy Settings
-
 User consent capture on first login, with re-consent triggered when the policy is updated. Consent state is stored per user with a timestamp and policy version. Where consent is enabled, the login flow must block until granted.
 
 ## G2. Support Channel Administration
 
 ### G2.1 Email
-
 Configured as **two separate server connections** plus a preferences group:
 
 - **Outgoing** — the address the system sends from (notifications, announcements)
@@ -921,7 +877,6 @@ Configured as **two separate server connections** plus a preferences group:
 Protocols: **SMTP, IMAP, POP3, MAPI**. **OAuth-based setup for Microsoft 365** is a distinct connector path (sign-in, tenant consent), not an SMTP variant — build it as its own connector type, since modern providers increasingly require it and password-based mail auth is being retired.
 
 **Email-to-ticket requirements:**
-
 - Thread matching by ticket ID in the subject **and** by message references header, so replies attach to the right ticket rather than opening new ones
 - **Loop protection** — ignore auto-replies, out-of-office, and bounce messages by header inspection. An unguarded email-to-ticket integration in a loop with an autoresponder generates thousands of tickets overnight; this is a real and common outage
 - Attachment extraction with size and type limits (I6)
@@ -933,19 +888,16 @@ Protocols: **SMTP, IMAP, POP3, MAPI**. **OAuth-based setup for Microsoft 365** i
 The requester-facing control surface. Each toggle maps to a server-side permission check, never merely a hidden UI element.
 
 **Incident creation**
-
 - Allow Requester to create Incident
 - Allow **Guest** Requester to Report a Request (available only if the above is on)
 - Allow Requester to Create Incident **on Behalf of Other Requester** (makes the Requester field editable)
 
 **Visibility**
-
 - Allow Requester to View Request **Due By** — must surface consistently in the detail page, list columns, list search conditions, **and** export column list. Applying it to only some of the four is a common and confusing bug
 - Allow Requester to Access **Solution**
 - Allow Requester to Access **Audit Trail** (adds an Audit Trail tab to their ticket view)
 
 **Ticket actions**
-
 - Allow Requester to **Close** Request
 - Allow Requester to **Submit Feedback** (post resolve/close, per Feedback Settings)
 - Allow Requester to **Reopen Resolved** Request — with **Grace Period**: `Unlimited` or `N Days`, after which reopen is disabled
@@ -953,64 +905,52 @@ The requester-facing control surface. Each toggle maps to a server-side permissi
 - **Mandate comment to Reopen** Request
 
 **Service catalog**
-
 - Allow Requester to Access Service Catalog
 - Allow **Guest** Requester to Request for Service
 - Allow Requester to Request Service **On Behalf Of** Other Requester
 
 **Assets / CIs**
-
 - Allow Requester to Access My Assets / My CIs
 - Allow Requester to **Link Asset / Link CI** to a request
 - Allow Requester to link asset/CI **of another requester**
 - **Auto-Link Requester Assets/CIs** — automatically attaches the logged-in requester's items (for service requests this must additionally be configured per catalog item)
 
 **Knowledge**
-
 - Allow Requester To Access Knowledge
 - **Show Suggested Knowledge while creating new Request** (F3.1)
 
 **Approvals**
-
 - Allow Requester To Access My Approvals
 - Show Approvals tab in Request Detail View
 
 **Registration**
-
 - Allow Self Registration → Registration Type: `Allow Everyone` or `Set of Domains` (email-domain allowlist)
 
-> **Design lesson worth acting on.** Notice how many toggles are _pairs_ — an action, plus an "on behalf of another user" variant, plus a guest variant. Build the permission model to express **`action × subject-scope (self / other / guest)`** rather than adding boolean columns one at a time. Doing this once at the start collapses roughly forty settings into a coherent matrix; doing it later means migrating all of them.
+> **Design lesson worth acting on.** Notice how many toggles are *pairs* — an action, plus an "on behalf of another user" variant, plus a guest variant. Build the permission model to express **`action × subject-scope (self / other / guest)`** rather than adding boolean columns one at a time. Doing this once at the start collapses roughly forty settings into a coherent matrix; doing it later means migrating all of them.
 
 ### G2.3 Chat
-
 Live chat between requesters and technicians, with a technician-side chat console (J2), routing to available agents, and conversion of a chat into a ticket preserving the transcript.
 
 ### G2.4 Virtual Agent / Messaging Platforms
-
 Per-platform configuration (M4). Keep **inbound ticket creation** and **outbound notification delivery** as separate configuration entries even on a shared platform — an organization may want outbound Slack notifications without accepting inbound ticket creation there.
 
 ## G3. User Administration
 
 ### G3.1 Technicians and Requesters
-
 Separate management surfaces sharing a permission. Each user carries: name, email, logon name, contact, department, location, role, groups, support level, availability status, do-not-disturb, verified flag, and custom fields.
 
 **Operations:** create · edit · **bulk import** (CSV and LDAP) · block/unblock (with a recorded **Blocked Reason**) · archive/restore · **convert requester → technician** (assigning the configured default role) · convert technician → requester.
 
 ### G3.2 User Form
-
 System and custom fields capturing additional user detail. **These fields are usable in automation conditions** (E5, F5.3) — which is what makes VIP handling, location-based routing, and department-driven approval chains configurable rather than hardcoded.
 
 ### G3.3 Technician Groups and Requester Groups
-
 - **Technician Groups** — teams for assignment and OLA scoping; a technician may belong to several. Each group carries its own **business hours**, which is what makes SLA calculation team-aware (D3).
 - **Requester Groups** — collections of requesters, definable by department, used for approval routing and catalog visibility scoping.
 
 ### G3.4 Roles
-
 Two classes:
-
-- **Predefined (system) roles** — shipped, **cannot be deleted**, and their **permissions cannot be edited** (a deliberate lockout guard). Membership _can_ still be changed.
+- **Predefined (system) roles** — shipped, **cannot be deleted**, and their **permissions cannot be edited** (a deliberate lockout guard). Membership *can* still be changed.
 - **Custom roles** — admin-created, fully editable and deletable.
 
 **Management surface:** search by name · filter by All / Predefined / Custom (search and filter combine) · **Duplicate** an existing role as a starting point · assign users via a Users tab on the role itself · **Set as Default** — the role auto-assigned when a requester is converted to a technician, with a documented fallback if none is set.
@@ -1018,52 +958,45 @@ Two classes:
 **Reference default role set** (a useful completeness checklist, scoped to this build): Super Admin · Service Desk Technician (Request + Problem + Change) · Request Specialist · Problem Specialist · Change Specialist · Knowledge Manager · Dashboard Viewer · Report Viewer · Requester.
 
 ### G3.5 Identity Configuration
-
 LDAP/Active Directory · SSO (SAML, OIDC) · SCIM provisioning · Custom Scopes. Full detail in Part I.
 
 ## G4. Request Management Administration
 
-| Area                    | Purpose                                                                                                                                                                                       |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Request Form**        | Field layout for incidents, system and custom fields, **User Fields Mapping** (auto-populate ticket fields from the requester's user record)                                                  |
-| **Request Form Rules**  | Conditional field logic (H2)                                                                                                                                                                  |
-| **Priority Matrix**     | Impact × Urgency → Priority grid (B3)                                                                                                                                                         |
-| **Statuses**            | Custom statuses beyond the defaults, each flagged open/closed/terminal, with colour and display order. The open/closed flag drives SLA clock behaviour and queue filters — it is not cosmetic |
-| **Categories**          | Multi-level category tree, importable and reorderable                                                                                                                                         |
-| **Response Templates**  | Canned replies with fixed-list placeholders and optional attachments                                                                                                                          |
-| **Custom Rules**        | Compliance gates on transitions (H4)                                                                                                                                                          |
-| **Print Templates**     | Print layouts with placeholder configuration, separately for technician and support portals                                                                                                   |
-| **Request Templates**   | Pre-filled request forms for common issues, selectable at creation and resettable to default                                                                                                  |
-| **Request Preferences** | Default support level, default type, reopen behaviour, spam handling, quick-create toggle                                                                                                     |
+| Area | Purpose |
+|---|---|
+| **Request Form** | Field layout for incidents, system and custom fields, **User Fields Mapping** (auto-populate ticket fields from the requester's user record) |
+| **Request Form Rules** | Conditional field logic (H2) |
+| **Priority Matrix** | Impact × Urgency → Priority grid (B3) |
+| **Statuses** | Custom statuses beyond the defaults, each flagged open/closed/terminal, with colour and display order. The open/closed flag drives SLA clock behaviour and queue filters — it is not cosmetic |
+| **Categories** | Multi-level category tree, importable and reorderable |
+| **Response Templates** | Canned replies with fixed-list placeholders and optional attachments |
+| **Custom Rules** | Compliance gates on transitions (H4) |
+| **Print Templates** | Print layouts with placeholder configuration, separately for technician and support portals |
+| **Request Templates** | Pre-filled request forms for common issues, selectable at creation and resettable to default |
+| **Request Preferences** | Default support level, default type, reopen behaviour, spam handling, quick-create toggle |
 
 ## G5. Service Catalog Administration
-
 Service categories · catalog items built from templates with all ten dimensions (C2.2) · per-item visibility scoping by requester group or department · enable/disable per item · per-item usage analytics (C2.4).
 
 ## G6. Problem, Change, Knowledge, and Task Administration
-
 Each module mirrors the Request Management pattern: **form + form rules + statuses + categories + custom rules + notifications + templates**. Building this as one parameterized configuration framework rather than four near-duplicate admin sections is the single largest code-saving decision in the administration layer — and it means a new module type inherits full configurability for free.
 
 Module-specific additions:
-
 - **Change** — change types, risk values, reasons, CAB definition, blackout windows
 - **Knowledge** — folder tree, article templates, approval workflow, publish/expiry defaults
 - **Task** — task types, task statuses, task forms
 
 ## G7. Asset / CI Administration (lightweight)
-
 Asset types with type-specific custom attributes · asset statuses · CI types and relationship types · CSV import/export · **[Defer]** discovery agents, barcode/QR, movement approvals, depreciation (Part N).
 
 Only what is needed for the ticket-linking value described in C1.3 is in scope.
 
 ## G8. User Survey / CSAT Administration
-
 Survey builder (question set, rating scale, optional free text) · trigger conditions (on resolve, on close, sampled percentage) · frequency capping so the same requester isn't surveyed on every ticket · results feeding K2.
 
 **Frequency capping is the setting that determines whether CSAT data is trustworthy.** Surveying every ticket produces fatigue and a response set biased toward the annoyed; a configurable cap (for example, at most one survey per requester per week) yields better data and fewer complaints.
 
 ## G9. Security Administration
-
 Audit logs (configuration, email, operation) · active user sessions with forced revoke · password and lockout policy · IP allow/deny lists · MFA enforcement per role · API key management. Full detail in Part I.
 
 ## G10. Administrative Safety Requirements
@@ -1101,7 +1034,6 @@ Customization is the practical expression of Constitution Article II. This part 
 ## H2. Form Rules — full specification
 
 **Rule metadata**
-
 - Name, Description
 - **Rule Execution On**: `On Create` / `On Edit` / `On Create and Edit`
 - **Rule Applicable For**: `All Users` / `All Technicians` / `All Requesters` / `All Logged-in Users`
@@ -1109,7 +1041,6 @@ Customization is the practical expression of Constitution Article II. This part 
 - **Enabled** toggle · **drag-and-drop reordering** (order matters — rules evaluate in sequence) · **Duplicate**
 
 **Conditions**
-
 - Three condition sources: **Request Fields**, **Requester Fields**, **Logged-in User Fields**
 - Operators: `In` / `Not In`
 - Multiple conditions combine with **AND** (all must be true)
@@ -1137,7 +1068,6 @@ From-State → To-State pairs with condition groups that auto-advance status whe
 Custom rules enforce organizational compliance during processing: block a transition unless conditions are met, or require a comment or note accompanying an attribute change.
 
 **Canonical uses:**
-
 - A request cannot move to Resolved with no technician assigned
 - A change cannot enter Approval without a Backout Plan (C4.3)
 - A problem cannot close without Root Cause and Solution populated (C3.3)
@@ -1159,21 +1089,20 @@ The full engine (Part E). Use for anything crossing records, involving timing, s
 **Placeholders come from a fixed system list; users cannot define new ones.** Enforce this — free-form placeholder syntax evaluated against records is a template-injection surface, and a fixed list is also what makes template validation possible.
 
 ## H7. Branding and Personalization
-
 Organization branding (G1.2) · per-user light/dark theme · per-user display density · saved list views and filters per user · configurable default landing page per role · font-size control where accessibility mode is enabled.
 
 ## H8. Customization Limits (deliberate)
 
 Guard rails that keep configurability from becoming instability:
 
-| Limit                            | Value                 | Reason                                                   |
-| -------------------------------- | --------------------- | -------------------------------------------------------- |
-| Actions per form rule            | 10                    | Prevents unreadable rules; matches reference product     |
-| Task stages per catalog template | 15                    | Bounds fulfilment complexity                             |
-| Workflow loop iterations         | ~100, configurable    | Prevents runaway execution                               |
-| Automation cascade depth         | 10, configurable      | Loop protection (E9)                                     |
-| Custom fields per form           | Soft warning past ~40 | Form usability collapses well before any technical limit |
-| Concurrent in-flight workflows   | Configurable ceiling  | Bounds memory and queue depth                            |
+| Limit | Value | Reason |
+|---|---|---|
+| Actions per form rule | 10 | Prevents unreadable rules; matches reference product |
+| Task stages per catalog template | 15 | Bounds fulfilment complexity |
+| Workflow loop iterations | ~100, configurable | Prevents runaway execution |
+| Automation cascade depth | 10, configurable | Loop protection (E9) |
+| Custom fields per form | Soft warning past ~40 | Form usability collapses well before any technical limit |
+| Concurrent in-flight workflows | Configurable ceiling | Bounds memory and queue depth |
 
 **Every limit must produce a clear message naming the limit and why it exists**, not a generic validation error. An admin who hits an unexplained cap concludes the system is broken.
 
@@ -1199,13 +1128,13 @@ EFFECTIVE PERMISSIONS =
 
 **Layer 2 — User-level overrides.** An administrator may **grant** an individual a permission their roles do not confer, or **revoke** a permission their roles do confer. This is the capability the constitution lacked. It exists because organizations always contain individuals whose access does not match any clean job function: the senior technician trusted with automation configuration, the contractor who must not export data, the departing employee whose delete rights are withdrawn during their notice period.
 
-**Layer 3 — Scope.** Every permission is evaluated against a scope determining _which records_ it applies to (I3).
+**Layer 3 — Scope.** Every permission is evaluated against a scope determining *which records* it applies to (I3).
 
 ### I1.1 Resolution rules (must be unambiguous)
 
 1. **Revocation always wins.** If any layer revokes a permission, the user does not have it — regardless of how many roles grant it. There is no "grant overrides revoke" case. This makes revocation a reliable safety instrument, which is precisely when it is most needed.
 2. **Grants are additive across roles.** Multiple roles union rather than conflict.
-3. **The narrowest scope wins per permission, per source.** If a role grants `ticket.view` at `department` scope and a user-level grant extends it to `all`, the user gets `all` — grants may _widen_ scope. A revocation may only _remove_, never narrow to a wider scope.
+3. **The narrowest scope wins per permission, per source.** If a role grants `ticket.view` at `department` scope and a user-level grant extends it to `all`, the user gets `all` — grants may *widen* scope. A revocation may only *remove*, never narrow to a wider scope.
 4. **Overrides are explicit and visible.** A user whose effective permissions differ from their roles' is flagged in the user list and on their profile, with the deltas enumerated. Invisible exceptions become forgotten exceptions, and forgotten exceptions are how privilege creep happens.
 5. **Every override carries metadata:** who granted it, when, a **required justification**, and an **optional expiry**.
 
@@ -1243,7 +1172,7 @@ flowchart TD
 Two mechanisms that matter operationally and cost little:
 
 - **Time-bounded grants.** Any user-level grant may carry an expiry timestamp, after which it is automatically removed and the user notified. This turns "temporarily give Priya admin so she can fix the SLA config" from a permanent privilege escalation that nobody remembers into a bounded, self-cleaning event. A scheduled job expires them; expiry is audited exactly as granting is.
-- **Delegation.** A user may delegate a defined subset of their permissions to another user for a date range (typical cases: annual leave, approver absence). Delegation is **strictly narrower or equal** to the delegator's own effective permissions — you cannot delegate what you do not have — and delegated actions are audited as _"performed by X on behalf of Y"_, never silently attributed to Y. Delegation is itself a permission (`user.delegate`), so not everyone can do it.
+- **Delegation.** A user may delegate a defined subset of their permissions to another user for a date range (typical cases: annual leave, approver absence). Delegation is **strictly narrower or equal** to the delegator's own effective permissions — you cannot delegate what you do not have — and delegated actions are audited as *"performed by X on behalf of Y"*, never silently attributed to Y. Delegation is itself a permission (`user.delegate`), so not everyone can do it.
 
 ### I1.3 Permission sets (composable bundles)
 
@@ -1253,46 +1182,46 @@ This matters because it keeps the granularity of a large permission catalogue ma
 
 ## I2. Permission Catalogue
 
-Permissions follow the naming convention **`module.action[.qualifier]`**, and each is _separately_ assigned a scope (I3). The catalogue below is the complete required set; it is deliberately granular, because a permission that cannot be expressed cannot be governed.
+Permissions follow the naming convention **`module.action[.qualifier]`**, and each is *separately* assigned a scope (I3). The catalogue below is the complete required set; it is deliberately granular, because a permission that cannot be expressed cannot be governed.
 
 ### I2.1 Requests (Incidents & Service Requests)
 
-| Permission                                    | Meaning                                                                                       |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `request.view`                                | View requests (scoped)                                                                        |
-| `request.create`                              | Create a request                                                                              |
-| `request.create.on_behalf`                    | Create on behalf of another requester                                                         |
-| `request.edit`                                | Edit request fields (scoped)                                                                  |
-| `request.edit.description`                    | Edit the original description (separately controlled — it is the record of what was reported) |
-| `request.assign`                              | Assign to a technician                                                                        |
-| `request.assign.self`                         | Claim a ticket for oneself                                                                    |
-| `request.assign.other`                        | Assign to someone other than oneself                                                          |
-| `request.reassign.out_of_group`               | Reassign outside one's own technician group                                                   |
-| `request.transition`                          | Change status (further gated per-transition, I2.9)                                            |
-| `request.resolve`                             | Move to Resolved                                                                              |
-| `request.close`                               | Move to Closed                                                                                |
-| `request.reopen`                              | Reopen a resolved/closed request                                                              |
-| `request.merge`                               | Merge requests                                                                                |
-| `request.split`                               | Split a request                                                                               |
-| `request.convert_type`                        | Convert Incident ↔ Service Request                                                            |
-| `request.priority.override`                   | Set priority manually, overriding the matrix                                                  |
-| `request.sla.override`                        | Change or exempt the SLA on a specific ticket                                                 |
-| `request.reply.public`                        | Send a reply visible to the requester                                                         |
-| `request.note.internal`                       | Add an internal note                                                                          |
-| `request.note.view_internal`                  | See internal notes (distinct from adding them)                                                |
-| `request.worklog.add`                         | Log time                                                                                      |
-| `request.worklog.edit_other`                  | Edit another technician's work log                                                            |
-| `request.attachment.add` / `.delete`          | Attachment handling                                                                           |
-| `request.watcher.manage`                      | Add/remove watchers                                                                           |
-| `request.collaborator.manage`                 | Add/remove collaborators                                                                      |
-| `request.link.asset` / `.problem` / `.change` | Linking                                                                                       |
-| `request.spam.mark`                           | Mark as spam                                                                                  |
-| `request.archive` / `request.restore`         | Archival lifecycle                                                                            |
-| `request.delete`                              | Hard delete (archived only)                                                                   |
-| `request.bulk`                                | Perform bulk operations                                                                       |
-| `request.export`                              | Export request data                                                                           |
-| `request.audit.view`                          | View a request's audit trail                                                                  |
-| `request.major_incident.declare`              | Declare a major incident                                                                      |
+| Permission | Meaning |
+|---|---|
+| `request.view` | View requests (scoped) |
+| `request.create` | Create a request |
+| `request.create.on_behalf` | Create on behalf of another requester |
+| `request.edit` | Edit request fields (scoped) |
+| `request.edit.description` | Edit the original description (separately controlled — it is the record of what was reported) |
+| `request.assign` | Assign to a technician |
+| `request.assign.self` | Claim a ticket for oneself |
+| `request.assign.other` | Assign to someone other than oneself |
+| `request.reassign.out_of_group` | Reassign outside one's own technician group |
+| `request.transition` | Change status (further gated per-transition, I2.9) |
+| `request.resolve` | Move to Resolved |
+| `request.close` | Move to Closed |
+| `request.reopen` | Reopen a resolved/closed request |
+| `request.merge` | Merge requests |
+| `request.split` | Split a request |
+| `request.convert_type` | Convert Incident ↔ Service Request |
+| `request.priority.override` | Set priority manually, overriding the matrix |
+| `request.sla.override` | Change or exempt the SLA on a specific ticket |
+| `request.reply.public` | Send a reply visible to the requester |
+| `request.note.internal` | Add an internal note |
+| `request.note.view_internal` | See internal notes (distinct from adding them) |
+| `request.worklog.add` | Log time |
+| `request.worklog.edit_other` | Edit another technician's work log |
+| `request.attachment.add` / `.delete` | Attachment handling |
+| `request.watcher.manage` | Add/remove watchers |
+| `request.collaborator.manage` | Add/remove collaborators |
+| `request.link.asset` / `.problem` / `.change` | Linking |
+| `request.spam.mark` | Mark as spam |
+| `request.archive` / `request.restore` | Archival lifecycle |
+| `request.delete` | Hard delete (archived only) |
+| `request.bulk` | Perform bulk operations |
+| `request.export` | Export request data |
+| `request.audit.view` | View a request's audit trail |
+| `request.major_incident.declare` | Declare a major incident |
 
 ### I2.2 Problem, Change, Knowledge, Task
 
@@ -1304,31 +1233,25 @@ Each module carries the same shape — `view`, `create`, `edit`, `transition`, `
 **Task:** `task.create` · `task.assign` · `task.complete` · `task.edit_other` · `task.delete`
 
 ### I2.3 Approvals
-
 `approval.request` · `approval.act` (approve/reject/refer back) · `approval.act.delegate` · `approval.ignore` · `approval.delete` · `approval.preapprove` · `approval.view_all`
 
 ### I2.4 Assets / CIs
-
 `asset.view` · `asset.create` · `asset.edit` · `asset.assign_user` · `asset.link_ticket` · `asset.import` · `asset.export` · `asset.archive` · `asset.delete` · `ci.relationship.manage`
 
 ### I2.5 Users & Access
-
 `user.view` · `user.create` · `user.edit` · `user.import` · `user.block` · `user.archive` · `user.delete` · `user.convert_type` · `user.password.reset_other` · `user.session.revoke` · `user.delegate` · `user.permission.grant` · `user.permission.revoke` · `role.view` · `role.create` · `role.edit` · `role.delete` · `role.assign` · `scope.manage`
 
 > `user.permission.grant` and `user.permission.revoke` are the two most powerful permissions in the system. They should be held by very few people, always require MFA re-challenge (I5), and are subject to the anti-self-escalation rule (I8).
 
 ### I2.6 Automation & Configuration
-
 `automation.workflow.view` · `.create` · `.edit` · `.publish` · `.delete` · `.test` · `automation.log.view` · `automation.sla.manage` · `automation.approval_workflow.manage` · `automation.assignment.manage` · `automation.notification.manage` · `automation.scenario.manage` · `automation.schedule.manage` · `automation.script.manage`
 
 **`automation.script.manage` and `automation.workflow.publish` are effectively code-execution permissions** and must be treated with the same seriousness as administrative access (I7).
 
 ### I2.7 Customization
-
 `config.field.manage` · `config.form.manage` · `config.form_rule.manage` · `config.custom_rule.manage` · `config.status.manage` · `config.category.manage` · `config.priority_matrix.manage` · `config.template.manage` · `config.catalog.manage` · `config.service_model.manage`
 
 ### I2.8 Organization, Reporting, Security
-
 **Organization:** `org.settings.manage` · `org.branding.manage` · `org.department.manage` · `org.location.manage` · `org.business_hours.manage` · `org.channel.manage`
 **Reporting:** `report.view` · `report.create` · `report.schedule` · `report.export` · `dashboard.view` · `dashboard.create` · `dashboard.share` · `dashboard.pin_org`
 **Security:** `security.audit.view` · `security.audit.export` · `security.session.view` · `security.policy.manage` · `security.ip_rules.manage` · `security.mfa.enforce` · `security.apikey.manage` · `security.data_retention.manage`
@@ -1341,19 +1264,19 @@ Model transitions as first-class records carrying `allowed_permissions[]` and `r
 
 ## I3. Scope Resolution — the organizational hierarchy layer
 
-A permission without a scope is meaningless: `request.view` must answer _which_ requests.
+A permission without a scope is meaningless: `request.view` must answer *which* requests.
 
 ### I3.1 Scope values
 
-| Scope        | Meaning                                                                                                                  |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| `own`        | Records where the user is requester, assignee, watcher, or collaborator                                                  |
-| `group`      | Records belonging to the user's technician group(s)                                                                      |
+| Scope | Meaning |
+|---|---|
+| `own` | Records where the user is requester, assignee, watcher, or collaborator |
+| `group` | Records belonging to the user's technician group(s) |
 | `department` | Records in the user's department — optionally **including sub-departments** (a flag, since departments nest five levels) |
-| `location`   | Records at the user's location — optionally including child locations                                                    |
-| `hierarchy`  | Records belonging to the user **and everyone reporting to them, transitively**                                           |
-| `custom`     | Records matching an admin-defined attribute filter (I3.3)                                                                |
-| `all`        | Unrestricted                                                                                                             |
+| `location` | Records at the user's location — optionally including child locations |
+| `hierarchy` | Records belonging to the user **and everyone reporting to them, transitively** |
+| `custom` | Records matching an admin-defined attribute filter (I3.3) |
+| `all` | Unrestricted |
 
 Scope is assigned **per permission**, not per role. A user may legitimately hold `request.view` at `department` scope while holding `request.edit` at `own` scope — see everything my department raised, change only what I own.
 
@@ -1361,7 +1284,7 @@ Scope is assigned **per permission**, not per role. A user may legitimately hold
 
 The constitution had no concept of reporting lines. This adds one.
 
-- Each user carries an optional **`manager_id`**, forming a reporting tree independent of the department tree. Departments describe _where you work_; the reporting tree describes _who answers to you_. They are frequently not the same shape, which is why one cannot substitute for the other.
+- Each user carries an optional **`manager_id`**, forming a reporting tree independent of the department tree. Departments describe *where you work*; the reporting tree describes *who answers to you*. They are frequently not the same shape, which is why one cannot substitute for the other.
 - `hierarchy` scope resolves to the user plus their **transitive subordinates**.
 - Typical uses: a department head approving requests from anyone beneath them; a team lead seeing their reports' workload; a manager receiving escalations for their organization only.
 - **Depth limiting** is configurable per assignment (`hierarchy:1` for direct reports only, `hierarchy:*` for the full subtree), because "my direct reports" and "my entire division" are different grants.
@@ -1382,14 +1305,14 @@ A custom scope is a named, reusable condition set over record attributes (includ
 
 ## I4. Authentication
 
-| Method                      | Notes                                                                                                                                                                            |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Local**                   | Email/logon + password, hashed with argon2id (or bcrypt). Always available as a fallback so an SSO outage cannot lock out administrators (Constitution Article VIII)             |
-| **LDAP / Active Directory** | Bind-based authentication, bulk user import, plus **AD self-service** letting locked-out users unlock or reset their password from the portal _before_ login                     |
+| Method | Notes |
+|---|---|
+| **Local** | Email/logon + password, hashed with argon2id (or bcrypt). Always available as a fallback so an SSO outage cannot lock out administrators (Constitution Article VIII) |
+| **LDAP / Active Directory** | Bind-based authentication, bulk user import, plus **AD self-service** letting locked-out users unlock or reset their password from the portal *before* login |
 | **SSO — SAML 2.0 and OIDC** | Multiple providers configurable simultaneously; the login page renders one button per provider alongside standard sign-in. With no IdP configured, only standard sign-in appears |
-| **SCIM provisioning**       | Automated user and group lifecycle sync from the identity provider — eliminates manual user administration rather than merely automating login                                   |
-| **MFA (TOTP)**              | Enforceable **per role**, with a per-user enrolment state and recovery codes                                                                                                     |
-| **API keys**                | Scoped, revocable, expiring, per service account. Never a user's own credentials                                                                                                 |
+| **SCIM provisioning** | Automated user and group lifecycle sync from the identity provider — eliminates manual user administration rather than merely automating login |
+| **MFA (TOTP)** | Enforceable **per role**, with a per-user enrolment state and recovery codes |
+| **API keys** | Scoped, revocable, expiring, per service account. Never a user's own credentials |
 
 **Just-in-time provisioning** on first SSO login, with role assignment driven by an IdP group claim mapping — configurable, so the identity provider becomes the source of truth for role membership where the organization wants that.
 
@@ -1589,7 +1512,6 @@ Usability is a stated top priority, so this part specifies behaviour rather than
 ## J1. Self-Service Portal (Requester)
 
 ### J1.1 Capabilities
-
 Report an incident · browse and submit from the service catalog · track ticket status in real time · search and browse knowledge · live chat · act on approvals assigned to them · view their assets/CIs · view announcements · view most-read articles · contact details · Active Directory self-service (password unlock/reset before login, where LDAP is configured).
 
 ### J1.2 The submission flow (the most important screen in the system)
@@ -1626,17 +1548,14 @@ flowchart TD
 ```
 
 ### J1.3 Tracking
-
 "My Tickets" list with status, last update, and clear next-action indication ("Waiting on you" is a distinct, visually prominent state — it is the single most common cause of stalled tickets). Detail view with the conversation thread, attachments, reply box, and — where permitted — reopen, close, feedback, and audit trail.
 
 ## J2. Technician Console
 
 ### J2.1 Top bar
-
 Menu collapse · **Create New** (quick-create across every record type the role permits) · font-size control (when accessibility mode is enabled, G1.7) · **Calendar** (requests and tasks due within a selected range) · **Chat Console** · **Notifications** · **Jobs/Downloads tray** · **Admin Settings** (permission-gated) · **Keyboard Shortcuts** reference · **User Menu** (profile, sign out, switch to support portal view).
 
 ### J2.2 Layout
-
 Three-pane: queues/filters · ticket list · ticket detail. Panes independently collapsible; the list-plus-detail split is what allows working a queue without navigation round trips.
 
 **Ticket list requirements:** configurable columns per user · saved views with filters · faceted search · SLA state visible as a colour indicator with time remaining · sort by any column · bulk selection (B6) · row density setting · **inline preview on hover** rather than requiring navigation.
@@ -1689,22 +1608,18 @@ Every suggestion shows **why it matched** (F7) and can be dismissed; dismissals 
 └──────────────────────────────────────────────────────────────┘
 ```
 
-"2 skipped" is the per-record permission check from B6 surfacing honestly rather than silently — the user must be able to see _which_ records were skipped and why.
+"2 skipped" is the per-record permission check from B6 surfacing honestly rather than silently — the user must be able to see *which* records were skipped and why.
 
 ### J2.3 Notifications
-
 Opt-in **per event type**. Documented default: **everything off except "my approval is requested."** Copy this default — it is a deliberate alert-fatigue defence, and systems that notify by default get their notifications ignored within a fortnight. Include mark-all-read, clear-all, digest mode, and an option to be notified of **email delivery failures**.
 
 ### J2.4 Jobs / Downloads tray
-
 Tracks long-running operations initiated by the current user — exports, bulk operations (B6), report generation — showing name, module, status, start and end time, with re-download of completed files and cancellation of in-flight ones. Build this as soon as any operation can exceed a couple of seconds; without it, long operations either block the UI or vanish silently.
 
 ### J2.5 Keyboard and speed
-
 A documented shortcut set for the high-frequency actions: next/previous ticket, reply, internal note, assign, change status, search, create. Every shortcut listed in the in-app reference. This is the difference between a console a technician tolerates and one they prefer.
 
 ## J3. Admin Console
-
 Flat, searchable tile grid; permission-driven rendering (G0).
 
 ## J4. Responsive & Multi-Platform
@@ -1716,15 +1631,12 @@ Flat, searchable tile grid; permission-driven rendering (G0).
 **Realistic mobile scope.** Technicians on mobile triage, reply, reassign, and approve; they do not build workflows. Admin configuration screens may be desktop-only by design — attempting to make a visual workflow builder usable at 375px wastes effort for a use case nobody has.
 
 ## J5. Accessibility
-
 WCAG 2.1 AA minimum: full keyboard navigability, visible focus states, sufficient contrast in both themes, ARIA labels on icon-only controls, form labels bound to inputs, error messages associated programmatically with their fields, and **no meaning conveyed by colour alone** — SLA state needs an icon or text label, not just red/amber. The font-size control (G1.7) supports low-vision users.
 
 ## J6. Performance Perception
-
 Optimistic UI updates for comments and status changes, reconciled by the real-time channel · skeleton loaders rather than spinners for list views · list virtualization beyond a few hundred rows · **WebSocket push for ticket updates rather than polling** (polling every technician's open queue every few seconds is the largest avoidable load a support portal generates).
 
 ## J7. Error Handling and Empty States
-
 Every error message states what happened, why, and what to do next. Every empty state explains what would appear there and offers the action that creates it. These are cheap to write and disproportionately determine whether the system feels reliable — an unexplained failure reads as a broken system even when the behaviour was correct.
 
 ---
@@ -1732,28 +1644,26 @@ Every error message states what happened, why, and what to do next. Every empty 
 # PART K — REPORTING & SERVICE MANAGEMENT
 
 ## K1. Dashboards
-
 Widget types: KPI tile · bar · line/trend · pie/donut · table · leaderboard. Data source is any entity with filter, group-by, and aggregate chosen through the UI — no SQL required. Dashboards are personal, team, or organization-wide (admin-pinned). Export to PDF via the Jobs tray (J2.4).
 
 ## K2. Standard Reports (the ones that get used)
 
-| Report                        | Question it answers                                                                      |
-| ----------------------------- | ---------------------------------------------------------------------------------------- |
-| SLA compliance                | Are we meeting our commitments, by priority, team, and category?                         |
-| Ticket volume trend           | Is demand rising, and where?                                                             |
-| First-contact resolution rate | Is L1 effective, or merely a routing layer?                                              |
-| Reopen rate                   | Are we closing tickets prematurely?                                                      |
-| Backlog aging                 | What is going stale, and with whom?                                                      |
-| Technician workload           | Is work distributed fairly?                                                              |
-| CSAT trend                    | Are people satisfied, sliced by team and category?                                       |
-| Category breakdown            | Where does demand concentrate — the input to problem management and knowledge investment |
-| Knowledge effectiveness       | Which articles deflect, and which need fixing (C5.3)                                     |
-| Change success rate           | Are our changes safe?                                                                    |
-| Approval cycle time           | Where do requests stall?                                                                 |
-| **Access review**             | Who holds non-default permissions, granted by whom and why (I8.6)                        |
+| Report | Question it answers |
+|---|---|
+| SLA compliance | Are we meeting our commitments, by priority, team, and category? |
+| Ticket volume trend | Is demand rising, and where? |
+| First-contact resolution rate | Is L1 effective, or merely a routing layer? |
+| Reopen rate | Are we closing tickets prematurely? |
+| Backlog aging | What is going stale, and with whom? |
+| Technician workload | Is work distributed fairly? |
+| CSAT trend | Are people satisfied, sliced by team and category? |
+| Category breakdown | Where does demand concentrate — the input to problem management and knowledge investment |
+| Knowledge effectiveness | Which articles deflect, and which need fixing (C5.3) |
+| Change success rate | Are our changes safe? |
+| Approval cycle time | Where do requests stall? |
+| **Access review** | Who holds non-default permissions, granted by whom and why (I8.6) |
 
 ## K3. Custom Report Builder
-
 Entity + filters + group-by + aggregate + visualization, built through the UI. Saved, shareable, schedulable. Scheduled reports deliver by email as PDF or CSV on a cron.
 
 ## K4. Reporting Performance (resource-critical)
@@ -1781,17 +1691,17 @@ Target: a single modest server (roughly 4 vCPU / 8–16 GB RAM) comfortably serv
 
 ## L2. Specific Efficiency Requirements
 
-| Area                   | Requirement                                                                                                                                         |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| SLA checking           | Indexed range query on `due_at` within the tick window — never a full scan of open tickets (D4)                                                     |
-| Smart Balance          | 10-minute recalculation debounce (E7.2)                                                                                                             |
-| Real-time updates      | WebSocket push, not polling (J6)                                                                                                                    |
-| Custom field filtering | JSONB with GIN index on the parent record (H1)                                                                                                      |
-| Reporting              | Pre-aggregated summary tables (K4)                                                                                                                  |
-| Duplicate detection    | One indexed full-text query plus one structural query, time-windowed (F1.5)                                                                         |
-| List views             | Cursor pagination and virtualization; never unbounded result sets                                                                                   |
-| Attachments            | Streamed, not buffered in memory; storage behind a `StorageProvider` interface so local disk swaps to S3-compatible without touching business logic |
-| Automation             | Queue-based, with concurrency ceilings and cascade-depth protection (E9)                                                                            |
+| Area | Requirement |
+|---|---|
+| SLA checking | Indexed range query on `due_at` within the tick window — never a full scan of open tickets (D4) |
+| Smart Balance | 10-minute recalculation debounce (E7.2) |
+| Real-time updates | WebSocket push, not polling (J6) |
+| Custom field filtering | JSONB with GIN index on the parent record (H1) |
+| Reporting | Pre-aggregated summary tables (K4) |
+| Duplicate detection | One indexed full-text query plus one structural query, time-windowed (F1.5) |
+| List views | Cursor pagination and virtualization; never unbounded result sets |
+| Attachments | Streamed, not buffered in memory; storage behind a `StorageProvider` interface so local disk swaps to S3-compatible without touching business logic |
+| Automation | Queue-based, with concurrency ceilings and cascade-depth protection (E9) |
 
 ## L3. Failure Behaviour
 
@@ -1811,11 +1721,9 @@ Target: a single modest server (roughly 4 vCPU / 8–16 GB RAM) comfortably serv
 - Migrations are versioned, reversible where possible, and always run against a fresh restore before production
 
 ## L5. Observability
-
 Structured JSON logging with correlation IDs across request, job, and workflow execution · health and readiness endpoints · Prometheus-format metrics (request latency, queue depth, job failures, automation executions, SLA breach counts) · error tracking. **[Defer]** Grafana dashboards until there is something worth watching, but emit the metrics from day one — retrofitting instrumentation is far more work than including it.
 
 ## L6. Deployment
-
 Docker Compose for the standard deployment; images built in CI. Zero-downtime deployment is **[Defer]** — for an in-house tool a brief maintenance window is acceptable, and the complexity it avoids is substantial. Environment configuration by file/environment variables, never committed. Kubernetes manifests optional and unnecessary at this scale.
 
 ---
@@ -1823,32 +1731,25 @@ Docker Compose for the standard deployment; images built in CI. Zero-downtime de
 # PART M — INTEGRATIONS & CHANNELS
 
 ## M1. REST API
-
 Every module exposes CRUD over a versioned REST API (`/api/v1/…`), so third parties can create and manage tickets without the UI — the literal implementation of Constitution Article I. **API rate limiting is a standard operational control, not an afterthought.** Scoped, revocable, expiring API keys per service account (I4); API calls are permission- and scope-checked identically to UI calls, and are audited.
 
 ## M2. Identity Providers
-
 Google Workspace · Azure AD/Entra ID · Okta · Keycloak · OneLogin · ADFS · WSO2 · JumpCloud. SCIM provisioning for automated user/group lifecycle sync (I4).
 
 ## M3. Email
-
 Two separate connections (incoming, outgoing) plus preferences; SMTP/IMAP/POP3/MAPI, with **OAuth for Microsoft 365 as its own connector type**. Full requirements including loop protection in G2.1.
 
 ## M4. Messaging & Chat
-
 Two **distinct** patterns sharing platforms — model them separately:
-
 - **Inbound virtual agent / chatbot** — ticket creation and status queries from inside a messaging app
 - **Outbound notification delivery** — status and approval alerts pushed to the same platforms
 
 Platforms: Microsoft Teams · Slack · WhatsApp · Telegram · Google Chat · Viber · Facebook Messenger · Line. Build **one or two** the organization actually uses; the rest are **[Defer]**. Integration breadth is the classic place where effort is spent on connectors nobody enables.
 
 ## M5. Monitoring / Event Sources
-
 **Bidirectional** integration with monitoring systems: inbound, a monitoring tool opens or updates incidents automatically on fault detection; outbound, resolution status flows back. Implemented via the generic inbound webhook endpoint plus outbound Integration Actions (E2), with per-integration signing secrets, delivery logs, and enable/disable.
 
 ## M6. Outbound Webhooks
-
 Any workflow Action can call an outbound webhook: JSON payload carrying `event`, `timestamp`, `data`, and an `X-Signature` HMAC header so receivers can verify authenticity. Per-integration URL allowlist, timeout, retry policy, and delivery log.
 
 ---
@@ -1857,19 +1758,19 @@ Any workflow Action can call an outbound webhook: JSON payload carrying `event`,
 
 Present in the reference product, **deliberately not built**:
 
-| Excluded                                                                                                     | Rationale                                                                                                                                                                                      |
-| ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Release Management                                                                                           | Deployment batching belongs to CI/CD tooling                                                                                                                                                   |
-| Project & Portfolio Management                                                                               | Belongs in a PM tool. Ticket-level tasks and staged fulfilment remain in scope (C6); portfolios, Gantt charts, and hierarchies do not                                                          |
-| Asset lifecycle depth — procurement, depreciation, movement/transfer approvals, barcode/QR, discovery agents | The lightweight CMDB (G7) is sufficient; asset **linking** is in scope, asset **lifecycle management** is not                                                                                  |
-| Contract, Purchase, Supplier Management                                                                      | Procurement domain                                                                                                                                                                             |
-| Patch, Vulnerability, OS Deployment                                                                          | Endpoint security operations — a different product category                                                                                                                                    |
-| MSP / multi-tenant portals                                                                                   | Single-organization deployment. Note that company-scoping logic in the reference product pervades assignment, SLA, and portal branding — omitting it now is far cheaper than removing it later |
-| Predictive analytics, sentiment analysis, forecasting                                                        | Statistically meaningless at this volume; invites misplaced confidence (F6)                                                                                                                    |
-| LLM-assisted drafting                                                                                        | **[Defer]** — extension point designed (F4 tier 3), nothing built                                                                                                                              |
-| Vector/semantic search                                                                                       | **[Defer]** until the knowledge base exceeds several hundred articles and measurement shows keyword search failing (F3.3)                                                                      |
-| Underpinning Contracts (UC)                                                                                  | **[Defer]** until vendor contracts are formally tracked (D1)                                                                                                                                   |
-| Zero-downtime deployment                                                                                     | **[Defer]** — a maintenance window is acceptable for an in-house tool (L6)                                                                                                                     |
+| Excluded | Rationale |
+|---|---|
+| Release Management | Deployment batching belongs to CI/CD tooling |
+| Project & Portfolio Management | Belongs in a PM tool. Ticket-level tasks and staged fulfilment remain in scope (C6); portfolios, Gantt charts, and hierarchies do not |
+| Asset lifecycle depth — procurement, depreciation, movement/transfer approvals, barcode/QR, discovery agents | The lightweight CMDB (G7) is sufficient; asset **linking** is in scope, asset **lifecycle management** is not |
+| Contract, Purchase, Supplier Management | Procurement domain |
+| Patch, Vulnerability, OS Deployment | Endpoint security operations — a different product category |
+| MSP / multi-tenant portals | Single-organization deployment. Note that company-scoping logic in the reference product pervades assignment, SLA, and portal branding — omitting it now is far cheaper than removing it later |
+| Predictive analytics, sentiment analysis, forecasting | Statistically meaningless at this volume; invites misplaced confidence (F6) |
+| LLM-assisted drafting | **[Defer]** — extension point designed (F4 tier 3), nothing built |
+| Vector/semantic search | **[Defer]** until the knowledge base exceeds several hundred articles and measurement shows keyword search failing (F3.3) |
+| Underpinning Contracts (UC) | **[Defer]** until vendor contracts are formally tracked (D1) |
+| Zero-downtime deployment | **[Defer]** — a maintenance window is acceptable for an in-house tool (L6) |
 
 Anything on this list re-entering scope arrives as an ADR against the constitution (Part XIV), not by quiet absorption.
 
@@ -1880,7 +1781,6 @@ Anything on this list re-entering scope arrives as an ADR against the constituti
 Behaviours that are easy to miss and expensive to retrofit.
 
 **Data model**
-
 - [ ] Incident and Service Request share one table with a type discriminator, plus a conversion action
 - [ ] Spam, Archived, and Merged-secondary are distinct from Closed and excluded from metrics via one `isOperationallyActive()` predicate
 - [ ] Escalation modelled as separate response/resolution level counters, not a breached boolean
@@ -1890,7 +1790,6 @@ Behaviours that are easy to miss and expensive to retrofit.
 - [ ] Custom fields: EAV for definition, JSONB + GIN on the parent for filtering (H1)
 
 **Engine correctness**
-
 - [ ] `BusinessCalendar.addWorkingDuration()` with both documented worked examples as unit tests (D3)
 - [ ] Priority matrix fires only when priority is blank at creation (B3)
 - [ ] SLA clock pauses stored as explicit intervals, per-policy configurable
@@ -1904,7 +1803,6 @@ Behaviours that are easy to miss and expensive to retrofit.
 - [ ] Waiting workflow instances persist across restart (L3)
 
 **Rules, permissions & security**
-
 - [ ] Form rules: 10-action cap, AND-only conditions, ordered evaluation, reverse-actions toggle, system fields immune to destructive actions — **enforced server-side** (H2)
 - [ ] Approvals: sequential stages, Unanimous vs Majority, rejection kills the whole approval, Referred Back as a first-class state, approver-deletion cascade (C2.3)
 - [ ] Effective permissions = roles + grants − revocations, **revocation always wins** (I1.1)
@@ -1919,14 +1817,12 @@ Behaviours that are easy to miss and expensive to retrofit.
 - [ ] Audit log append-only, with defined retention and rollover (I9)
 
 **Intelligence**
-
 - [ ] Duplicate detection suggests, never merges automatically (F1.4)
 - [ ] Every suggestion shows its reason, can be dismissed, and is logged (F7)
 - [ ] Each intelligent feature independently disableable
 - [ ] Suggestion acceptance rate reported, so low-value features can be retired (F7)
 
 **Interface**
-
 - [ ] Notification defaults: everything off except approval requests (J2.3)
 - [ ] Jobs/Downloads tray for long-running operations (J2.4)
 - [ ] "Due By" visibility toggle applied across detail, list columns, list search, and export (G2.2)
@@ -1937,7 +1833,6 @@ Behaviours that are easy to miss and expensive to retrofit.
 - [ ] No meaning conveyed by colour alone (J5)
 
 **Operations**
-
 - [ ] Reporting over pre-aggregated tables, respecting user scope (K4)
 - [ ] Exports and large bulk operations run asynchronously (B6, K4)
 - [ ] Deletion guards with usage counts everywhere in admin (G10)
@@ -1952,7 +1847,6 @@ Behaviours that are easy to miss and expensive to retrofit.
 Per Constitution Part XIV, deviations and revisions are recorded rather than silently applied. The following amendments arise from this reference and take effect on acceptance.
 
 ## Amendment A-001 — Granular, Overridable Permission Model
-
 **Supersedes:** Constitution Part V.2, V.3
 **Status:** Adopted
 **Constitution version impact:** MAJOR (alters Article III's realization)
@@ -1960,7 +1854,6 @@ Per Constitution Part XIV, deviations and revisions are recorded rather than sil
 **Context.** Part V specified role-based access control with a fixed default role set and permissions checked server-side. In practice this cannot express two common requirements: granting or withdrawing a single permission for one individual without creating a role for them, and reflecting organizational reporting hierarchy in record visibility. Organizations invariably contain individuals whose access does not match a clean job function, and creating a bespoke role per exception produces role sprawl that is harder to audit than the exceptions themselves.
 
 **Decision.** Replace the two-layer model (role → permission) with the three-layer model in **Part I**:
-
 1. Roles as the baseline, composed from reusable **permission sets**
 2. **Per-user grants and revocations**, with revocation always winning, requiring justification, supporting expiry, and visibly flagged as deltas from role baseline
 3. **Per-permission scope** including a new **`hierarchy`** scope resolved through a `manager_id` reporting tree, independent of the department tree
@@ -1968,45 +1861,39 @@ Per Constitution Part XIV, deviations and revisions are recorded rather than sil
 The permission catalogue expands from the illustrative set in Part V.2 to the comprehensive catalogue in **I2**, including transition-level permissions (I2.9).
 
 **Consequences.**
-
-- _Positive:_ least privilege becomes genuinely expressible; temporary access self-expires; access review becomes a report rather than an investigation; organizational hierarchy is representable without abusing departments.
-- _Negative:_ effective-permission computation is more complex and must be cached carefully; the permission administration UI becomes a first-class surface requiring real design effort (I10); more permissions means more opportunity to misconfigure — mitigated by permission sets, the explain tool, and simulation.
-- _Required guard rails:_ the privilege safety rules in I8 are not optional. A granular grant/revoke system without anti-self-escalation and last-admin protection is more dangerous than the fixed model it replaces.
+- *Positive:* least privilege becomes genuinely expressible; temporary access self-expires; access review becomes a report rather than an investigation; organizational hierarchy is representable without abusing departments.
+- *Negative:* effective-permission computation is more complex and must be cached carefully; the permission administration UI becomes a first-class surface requiring real design effort (I10); more permissions means more opportunity to misconfigure — mitigated by permission sets, the explain tool, and simulation.
+- *Required guard rails:* the privilege safety rules in I8 are not optional. A granular grant/revoke system without anti-self-escalation and last-admin protection is more dangerous than the fixed model it replaces.
 
 **Phase impact.** Roles, the permission catalogue, and scope enforcement move into **Phase 0/1** (they are load-bearing for every subsequent module). User-level overrides, hierarchy scope, and the explain tool land in **Phase 3** alongside SSO/MFA. Delegation and approval-gated grants remain **[Defer]**.
 
 **Constitution changes applied.** Part V rewritten (5.2 three-layer model, 5.3 scope and hierarchy, 5.3a privilege safety rules) · **7.3 added** — the complete access-control data model: tables, indexes, cycle protection, the `resolveEffectivePermissions()` algorithm, cache invalidation triggers, and permission seeding from a versioned manifest · **8.3 added** — the access control API surface, including the explain and simulate endpoints and the specific non-generic rejection codes · Part XII rephased · Appendix B superseded and pointed here.
 
 ## Amendment A-002 — Automation Observability as a Phase-1 Requirement
-
 **Amends:** Constitution Part IV, Article VII
 **Status:** Adopted · **MINOR**
 
-Article VII requires failing visibly. Part **E9** makes this concrete and moves it earlier: execution logs, per-workflow health, admin failure alerting, **auto-disable after repeated failure**, **dry-run test mode**, and **cascade-depth loop protection** ship _with_ the automation engine, not after it. An automation engine without these is unsafe to enable in production, so they are not a later phase.
+Article VII requires failing visibly. Part **E9** makes this concrete and moves it earlier: execution logs, per-workflow health, admin failure alerting, **auto-disable after repeated failure**, **dry-run test mode**, and **cascade-depth loop protection** ship *with* the automation engine, not after it. An automation engine without these is unsafe to enable in production, so they are not a later phase.
 
 ## Amendment A-003 — Configuration Framework Unification
-
 **Amends:** Constitution Part III
 **Status:** Adopted · **MINOR**
 
 Part III described customization per module. **G6** replaces this with a single parameterized configuration framework (form + form rules + statuses + categories + custom rules + notifications + templates) instantiated per module. This is the largest code-saving decision in the administration layer, and it means any future module inherits full configurability without new admin code.
 
 ## Amendment A-004 — ITIL Version 5 Forward Compatibility
-
 **Amends:** Constitution Part I.3
 **Status:** Adopted · **MINOR**
 
 Part I.3 mapped to ITIL 4. ITIL Version 5 was announced in early 2026 with publications rolling out through the year; ITIL 4 remains the practical baseline. Two Version 5 directions are cheap to accommodate now and are hereby required (**A2**): (a) every automated or inferred decision stores a reason and permits human override — the governance requirements in **F7**; (b) the catalog item model must not assume "service" excludes "product".
 
 ## Amendment A-005 — Intelligence Scope and Resource Ceiling
-
 **Amends:** Constitution Part I.5 (out-of-scope list)
 **Status:** Adopted · **MINOR**
 
 Part I.5 excluded "AI-based ticket triage" wholesale. **Part F** narrows this usefully: deterministic and statistically simple intelligence — duplicate detection, priority-weighted routing, knowledge deflection, resolution memory, anomaly signals — **is in scope**, because it is cheap, explainable, and high-value. Model-based, predictive, and LLM-dependent features remain excluded or deferred. The binding constraint is the resource ceiling in **F**: no model training, no vector database, no GPU, no per-request external call in the hot path.
 
 ## Amendment A-006 — Explicit Deferral Register
-
 **Amends:** Constitution Part XII
 **Status:** Adopted · **MINOR**
 
@@ -2030,4 +1917,4 @@ Compiled from Motadata's public ServiceOps documentation (docs.motadata.com/serv
 
 ---
 
-_Read alongside Support_Portal_Development_Constitution.md. The constitution governs where the two differ, except where Part Q formally amends it. New conflicts are logged as ADRs per Constitution Part XIV._
+*Read alongside Support_Portal_Development_Constitution.md. The constitution governs where the two differ, except where Part Q formally amends it. New conflicts are logged as ADRs per Constitution Part XIV.*
