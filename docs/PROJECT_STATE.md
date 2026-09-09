@@ -120,6 +120,10 @@ Login page plus a protected app shell, rebuilt in a ServiceOps-inspired language
   and above), `sast-policy` (`main` + weekly), `sca`. Every run publishes the full findings
   as a `sast-findings` artifact for 30 days, sub-gate ones included. **`sast-policy` is
   knowingly red** — see §4.
+- Actions are pinned and on Node 24 wherever we control them: `checkout@v7`,
+  `setup-node@v7`, `upload-artifact@v7.0.1`, `download-artifact@v8.0.1`,
+  `Veracode-pipeline-scan-action@v1.0.25`, `veracode-sca@v2.1.20`. The one exception is
+  `veracode-uploadandscan-action@0.2.11` (`node20`), which is Veracode's newest — see §4.
 - The API runtime image is a production-only install (`prod-deps` stage, ADR-0011); the
   dev stack masks every workspace `node_modules` with a named volume (gotcha 7).
 - Tests: `PermissionGuard`, `AllExceptionsFilter` and `configuration` unit tests (api, 23);
@@ -277,6 +281,13 @@ locally rather than by any unit test.
   deliberate dev-only `SESSION_SECRET` fallback at `configuration.ts:15`. That Medium is
   below the High-and-above PR gate, so `sast-pipeline` passes and PRs are unaffected.
   Dismissed under Part XIII with the rationale in ADR-0015.
+  **What is _not_ the cause, though it is the last line of the log:** a Node deprecation
+  `##[warning]` printed during `Complete job`, after the scan has already finished. It has
+  misled a read of this job once. `actions/upload-artifact` and `actions/download-artifact`
+  are on `v7.0.1` / `v8.0.1` (both `node24`) so they no longer appear in it, but
+  `veracode/veracode-uploadandscan-action@0.2.11` declares `using: node20` and is the newest
+  release Veracode publishes — so the warning persists here until they ship a Node 24 build.
+  It fails nothing.
   **The follow-up that actually clears it:** approve a mitigation on the finding in the
   Veracode platform (the app's latest static scan → the CWE-259 finding → Mitigate by
   Design, citing ADR-0015). Needs Veracode access and a human with the approver role, so it
