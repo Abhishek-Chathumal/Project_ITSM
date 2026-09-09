@@ -143,9 +143,21 @@ always `The policy status 'Did Not Pass' is not passing.` The line printed _afte
 during `Complete job`, is a Node deprecation `##[warning]` naming
 `veracode/veracode-uploadandscan-action@0.2.11` — which is a warning, is emitted after the
 scan already finished, and has never failed anything. It is the last line in the log and so
-reads like the cause; it is not. `0.2.11` is the newest release Veracode publishes and it
-still declares `using: node20`, so the warning stays until they ship a Node 24 build. Every
-action we control runs `node24`.
+reads like the cause; it is not.
+
+**That warning is not a ticking clock, and the escape hatch it names must not be set.** Read
+it to the end: _"The following actions target Node.js 20 but are **being forced to run on
+Node.js 24**."_ GitHub has already migrated the runtime; only the action's manifest is
+stale, and the scan runs and completes on Node 24 today. So there is nothing waiting to
+break. `ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true`, which the message offers, forces
+Node 20 back **on** — it is for people whose actions broke under 24, and setting it here
+would move a security-scanning job onto an unsupported runtime to silence a cosmetic line.
+
+The fix is Veracode's: `0.2.11` is still their newest release and even their default branch
+declares `using: node20`, so there is nothing to upgrade to. Every action we control runs
+`node24`. If it ever stops being a warning, the real remedy is to drop the action and invoke
+the Veracode Java wrapper directly in a `run:` step — the working command line is in any
+`sast-policy` log.
 
 ## Hard-won gotchas — do not regress these
 

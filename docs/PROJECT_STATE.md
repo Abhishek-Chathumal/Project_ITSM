@@ -157,7 +157,9 @@ Login page plus a protected app shell, rebuilt in a ServiceOps-inspired language
 - Actions are pinned and on Node 24 wherever we control them: `checkout@v7`,
   `setup-node@v7`, `upload-artifact@v7.0.1`, `download-artifact@v8.0.1`,
   `Veracode-pipeline-scan-action@v1.0.25`, `veracode-sca@v2.1.20`. The one exception is
-  `veracode-uploadandscan-action@0.2.11` (`node20`), which is Veracode's newest — see §4.
+  `veracode-uploadandscan-action@0.2.11`, whose manifest still says `node20` — but GitHub
+  already runs it on Node 24 regardless, so this is a stale manifest rather than a pending
+  breakage. See §4.
 - The API runtime image is a production-only install (`prod-deps` stage, ADR-0011); the
   dev stack masks every workspace `node_modules` with a named volume (gotcha 7).
 - Tests: `PermissionGuard`, `AllExceptionsFilter` and `configuration` unit tests (api, 23);
@@ -385,8 +387,22 @@ locally rather than by any unit test.
   misled a read of this job once. `actions/upload-artifact` and `actions/download-artifact`
   are on `v7.0.1` / `v8.0.1` (both `node24`) so they no longer appear in it, but
   `veracode/veracode-uploadandscan-action@0.2.11` declares `using: node20` and is the newest
-  release Veracode publishes — so the warning persists here until they ship a Node 24 build.
-  It fails nothing.
+  release Veracode publishes. It fails nothing.
+
+  **Read that warning to its end before treating it as a deadline.** It says the action is
+  _"being forced to run on Node.js 24"_ — GitHub has already migrated the runtime, and run
+  `34312063025` completed a full scan (`Results Ready`) that way. Only the manifest is stale.
+  Confirmed 2026-09-09: `0.2.11` is Veracode's newest release **and their default branch
+  also still declares `node20`**, so there is nothing to upgrade to, released or not.
+
+  The `ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true` variable the message offers forces
+  Node 20 back **on**. It exists for actions that broke under 24; ours did not. Setting it
+  would put a security-scanning job on an unsupported runtime to silence a cosmetic line —
+  **do not**. If the warning ever becomes an error, the real remedy is to drop the action and
+  call the Veracode Java wrapper directly in a `run:` step; the exact working invocation,
+  `deleteincompletescan 1` included, is printed in every `sast-policy` log. That trades a
+  vendor action for a pinned, checksum-verified jar fetched at CI time, which is why it is
+  not worth doing while the thing still works.
   **The follow-up that actually clears it:** approve a mitigation on the finding in the
   Veracode platform (the app's latest static scan → the CWE-259 finding → Mitigate by
   Design, citing ADR-0015). Needs Veracode access and a human with the approver role, so it
