@@ -527,6 +527,60 @@ schema cannot prevent it; only the helper can), and **type conversion** is desig
 built, because mapping a status onto the target type's workflow needs Slice 4's transition
 rules to exist first.
 
+### Phase 0 Slice 0b-1 — scope on the grant, and the reporting tree (2026-09-10)
+
+**ADR-0021.** The additive half of the access-control schema. Slice 0b was split because the
+other half replaces `User.roleId` with a `UserRole` join, which changes `SessionUserDto` —
+the DTO Article V records as having "diverged once and crashed the frontend". Four new tables
+and a breaking DTO change in one diff would carry two unrelated risks.
+
+**`RolePermission.scope` has no default, and that was the right call within minutes.** Adding
+the column broke `roles.service.ts` at compile time, which was assigning permissions without
+stating one. A default would have swallowed that: `all` widens silently, `own` breaks every
+administrative permission that has no records to scope by.
+
+**Scope is an enum although nearly everything else here is rows.** Article II says
+configuration over code, and statuses, priorities and categories all follow it. Scope does
+not, for the same reason `DisplayTone` does not (ADR-0016): each value names a predicate
+`applyScope()` has to build, so an admin inventing an eighth would be naming a filter no code
+can express. The admin-authored escape hatch is `CustomScope`.
+
+**`CustomScope` exists as a table with no behaviour**, resolving a genuine tension in the
+docs: A-001 puts custom scopes in Phase 3, while 7.3.1 puts `RolePermission.custom_scope_id`
+in Phase 0, and ADR-0016 forbids a column pointing at a table that does not exist. Ten columns
+now; evaluation later. `applyScope()` must treat `custom` as unimplemented and fail closed.
+
+**The reporting tree is the fourth consumer of the tree helper, not a fourth implementation.**
+Ref B4 asked for one materialized-path helper and Ref I3.2 anticipated this as its fourth
+user. The practical payoff: the `/1/7/` vs `/1/70/` prefix collision was already solved, so
+it could not be reintroduced here.
+
+**Cycles are rejected, not detected.** 7.3.2 says so by name — _"Reject the assignment; do not
+merely detect it later"_ — because a recorded loop makes subtree resolution non-terminating.
+`setManager()` checks before writing anything, and rewrites the whole subtree in one
+transaction: a partial rewrite would leave descendants claiming an ancestry they no longer
+have, and `hierarchy` scope would return a wrong row set rather than an error.
+
+**Two things done here that were not on the slice list, both because this change made them
+newly relevant:**
+
+- **Predefined roles are now permission-locked** (Ref G3.4). `isSystemRole` existed and
+  nothing enforced it. Adding scope to an endpoint that could still rewrite the built-in roles
+  would have widened the blast radius of the very lockout guard G3.4 describes.
+- **The audit diff records `key:scope`, not just the key.** Widening `request.view` from `own`
+  to `all` changes what a role reaches without changing which keys it holds — a diff of keys
+  alone would show that as no change at all.
+
+**Verified against a real Postgres**, not only against fakes: all seven scope values
+round-trip through the enum, `scopeDepth` stores `1` and null, a four-person reporting tree
+returns the right subtree from two different roots and excludes an unrelated one, the
+`reporting_path` index is confirmed to carry `text_pattern_ops`, and permission sets and
+custom scopes link up. 92 unit tests including cycle rejection and whole-subtree rewriting.
+
+**The migration backfills `scope = 'all'` on 13 existing grants, and it is not a widening.**
+Nothing enforces scope yet, so every query already returns every row the caller can see;
+`all` records what is in force rather than granting anything new.
+
 ### Phase 0 Slice 0a — the permission manifest (2026-09-10)
 
 Ten hand-listed keys in `seed.ts` became 174 in a versioned manifest, reconciled into the
@@ -899,11 +953,20 @@ ADR-0017 has the full gap table. In dependency order:
    them — verified against a populated database, where all ten pre-A-001 keys deprecated.
    Guards and frontend migrated to the new keys; `role.manage` → `role.view`/`.create`/
    `.edit`/`.delete`, `audit.view` → `security.audit.view`, and so on.
-2. **Schema:** `Permission.module`/`is_sensitive`; `PermissionSet` + `PermissionSetItem` +
-   `RolePermissionSet`; `RolePermission.scope`/`scope_depth`/`custom_scope_id`; **`UserRole`**
-   — a user may now hold several roles, so today's single `User.roleId` FK goes; and
-   `User.manager_id` + `reporting_path` with a **cycle check on every assignment** and subtree
-   recomputation on move.
+2. **Schema — split in two, because half of it is breaking.**
+   - ✅ **0b-1 done (ADR-0021):** the `Scope` enum and
+     `RolePermission.scope`/`scope_depth`/`custom_scope_id`; `PermissionSet` +
+     `PermissionSetItem` + `RolePermissionSet`; `CustomScope` (table only, evaluation Phase
+     3); `User.manager_id` + `reporting_path` with cycle **rejection** at assignment and a
+     whole-subtree rewrite, reusing the materialized-path helper rather than writing a fourth
+     tree. `scope` has no default — a grant must state what it reaches, and the compiler
+     caught the one place that did not.
+   - ⏳ **0b-2 to do:** `UserRole`, replacing the single `User.roleId` FK. It changes
+     `SessionUserDto`, which Article V records as having "diverged once and crashed the
+     frontend", so it lands alone.
+
+   `Permission.module`/`is_sensitive` arrived with the manifest (ADR-0020).
+
 3. **`applyScope()`** — one helper, the only place that knows what `department` means.
 4. **The privilege safety rules (5.3a / Ref I8)** as acceptance criteria, not follow-ups.
 

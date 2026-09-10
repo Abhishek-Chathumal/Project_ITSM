@@ -28,6 +28,36 @@ enum UserStatus {
   disabled
 }
 
+/// Which records a permission reaches (Functional Reference I3.1).
+///
+/// Attached **per permission, not per role** (Amendment A-001): a user may legitimately hold
+/// `request.view` at `department` scope and `request.edit` at `own`. That is why this lives
+/// on `RolePermission` rather than on `Role`.
+///
+/// It is an enum rather than rows because, unlike a status or a priority, the set is defined
+/// by what `applyScope()` can implement — an admin inventing an eighth value would name a
+/// predicate no code can build. What admins *do* author is a `CustomScope`, which is the
+/// `custom` member's escape hatch.
+enum Scope {
+  /// Requester, assignee, watcher, or collaborator (Ref I3.1). All four — a narrower
+  /// reading is the silent-narrowing bug ADR-0018 exists to have prevented.
+  own
+  /// The user's technician group(s). Many-to-many; not the same as `department`.
+  group
+  /// The user's department, optionally including sub-departments (see `scopeDepth`).
+  department
+  /// The user's location, optionally including child locations.
+  location
+  /// The user plus everyone reporting to them, transitively (Ref I3.2).
+  hierarchy
+  /// An admin-defined attribute filter — see `CustomScope`. Evaluation is Phase 3.
+  custom
+  /// Unrestricted.
+  all
+
+  @@map("scope")
+}
+
 model User {
   id           String      @id @default(uuid())
   name         String
@@ -46,6 +76,25 @@ model User {
   status       UserStatus  @default(active)
   createdAt    DateTime    @default(now()) @map("created_at")
 
+  // --- The reporting tree (Ref I3.2, constitution 7.3.2).
+  //
+  // Independent of the department tree, and deliberately so: departments describe *where you
+  // work*, the reporting tree describes *who answers to you*, and Ref I3.2 notes they are
+  // "frequently not the same shape, which is why one cannot substitute for the other".
+  /// Optional line manager. **Every assignment runs a cycle check** — a reporting loop makes
+  /// subtree resolution non-terminating, and 7.3.2 requires rejecting the assignment rather
+  /// than detecting the loop later. Enforced in ReportingTreeService, not by a constraint:
+  /// no SQL constraint can express "is not an ancestor of".
+  managerId String? @map("manager_id")
+  manager   User?   @relation("ReportingLine", fields: [managerId], references: [id])
+  reports   User[]  @relation("ReportingLine")
+
+  /// Materialized ancestry over the reporting tree, `/<root>/…/<self>/`, maintained by the
+  /// same helper the three classification trees use (Ref B4's "implement once"). `hierarchy`
+  /// scope is then an indexed prefix match instead of a recursive CTE per request — which is
+  /// the entire reason the column exists.
+  reportingPath String @default("") @map("reporting_path")
+
   /// Technician group membership is many-to-many (Ref B1: "a technician may belong to
   /// several"). This is what `group` scope resolves through, and the reason it cannot be
   /// answered from `departmentId`.
@@ -59,17 +108,108 @@ model User {
 
   @@index([departmentId])
   @@index([locationId])
+  @@index([managerId])
+  // text_pattern_ops for the same reason the classification trees use it: a subtree test is
+  // `reporting_path LIKE '/a/b/%'`, which a default btree on text will not serve unless the
+  // database collation is C.
+  @@index([reportingPath(ops: raw("text_pattern_ops"))])
   @@map("users")
 }
 
 model Role {
-  id           String           @id @default(uuid())
-  name         String           @unique
-  isSystemRole Boolean          @default(false) @map("is_system_role")
-  permissions  RolePermission[]
-  users        User[]
+  id           String  @id @default(uuid())
+  name         String  @unique
+  description  String?
+  /// System roles are **permission-locked** (Ref G3.4): shipped, undeletable, and their
+  /// permission set cannot be edited — a deliberate lockout guard. Membership stays editable.
+  isSystemRole Boolean @default(false) @map("is_system_role")
+  /// The role auto-assigned when a requester is converted to a technician (Ref G3.4).
+  /// At most one role should carry this; enforced in the service, since a partial unique
+  /// index (`WHERE is_default_on_conversion`) is not expressible here — the same limitation
+  /// ADR-0016 documented for `Status.isInitial`.
+  isDefaultOnConversion Boolean @default(false) @map("is_default_on_conversion")
+
+  permissions    RolePermission[]
+  permissionSets RolePermissionSet[]
+  users          User[]
 
   @@map("roles")
+}
+
+/// A reusable bundle of permissions — "the middle unit between one permission and a whole
+/// role" (constitution 7.3.1, Ref I1.3).
+///
+/// Worth having because the alternative is copying the same twenty grants into nine roles and
+/// watching them drift. A set defined once and attached to nine roles stays consistent.
+model PermissionSet {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  name        String
+  description String?
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  items PermissionSetItem[]
+  roles RolePermissionSet[]
+
+  @@map("permission_sets")
+}
+
+/// One permission inside a set, with the scope the set suggests for it.
+///
+/// `defaultScope` is a *default*, not a lock: a role attaching the set can still hold the
+/// same permission at a different scope through a direct `RolePermission`. Resolution takes
+/// the widest (constitution 7.3.3).
+model PermissionSetItem {
+  permissionSetId String        @map("permission_set_id")
+  permissionSet   PermissionSet @relation(fields: [permissionSetId], references: [id], onDelete: Cascade)
+  permissionId    String        @map("permission_id")
+  permission      Permission    @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  defaultScope    Scope         @map("default_scope")
+  /// Depth limit for `hierarchy`/`department`/`location`; null means the whole subtree.
+  scopeDepth      Int?          @map("scope_depth")
+
+  @@id([permissionSetId, permissionId])
+  @@index([permissionId])
+  @@map("permission_set_items")
+}
+
+/// Roles composed from sets.
+model RolePermissionSet {
+  roleId          String        @map("role_id")
+  role            Role          @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionSetId String        @map("permission_set_id")
+  permissionSet   PermissionSet @relation(fields: [permissionSetId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionSetId])
+  @@index([permissionSetId])
+  @@map("role_permission_sets")
+}
+
+/// A named, reusable attribute filter (Ref I3.3) — "Technician, but only tickets where
+/// Location = Colombo and Category = Network".
+///
+/// The table exists now so `RolePermission.customScopeId` can carry a real foreign key
+/// rather than an unconstrained string (the placeholder rule ADR-0016 set). **Evaluating
+/// `conditions` is Phase 3**; until then `applyScope()` must treat `custom` as
+/// unimplemented and fail closed, never fall through to an unfiltered query.
+model CustomScope {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  /// Which entity the filter applies to, e.g. `request`. A scope written for requests is
+  /// meaningless against assets, so it is not silently reusable across entity types.
+  entityType  String   @map("entity_type")
+  /// The filter itself. JSONB so it can reference custom fields (Ref H1) without a schema
+  /// change per field.
+  conditions  Json
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  rolePermissions RolePermission[]
+
+  @@map("custom_scopes")
 }
 
 /// One entry from the permission catalogue (Functional Reference I2), seeded from the
@@ -95,19 +235,42 @@ model Permission {
   deprecatedAt DateTime?       @map("deprecated_at")
 
   roles       RolePermission[]
+  setItems    PermissionSetItem[]
 
   @@index([module])
   @@index([deprecatedAt])
   @@map("permissions")
 }
 
+/// A permission granted directly to a role, **with its scope**.
+///
+/// Constitution 7.3.1 is explicit that scope lives here and not on `Role`. The practical
+/// consequence is that the same role can hold `request.view` at `department` and
+/// `request.edit` at `own` — which is the shape Amendment A-001 introduced and the reason
+/// scope must never be encoded into a permission key.
 model RolePermission {
   roleId       String     @map("role_id")
   permissionId String     @map("permission_id")
   role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
+  /// **No default on purpose.** A grant must state which records it reaches; a default would
+  /// let a new grant acquire one silently, and whichever value were chosen would be wrong
+  /// half the time — `all` widens, `own` breaks every administrative permission that has no
+  /// records to scope.
+  scope Scope
+
+  /// Subtree depth for `hierarchy`, `department` and `location`. `1` means direct reports /
+  /// immediate children only; **null means the whole subtree** (Ref I3.2's `hierarchy:*`).
+  /// Meaningless for `own`, `group`, `custom` and `all`, and ignored there.
+  scopeDepth Int? @map("scope_depth")
+
+  /// Set only when `scope = custom`. Evaluation is Phase 3.
+  customScopeId String?      @map("custom_scope_id")
+  customScope   CustomScope? @relation(fields: [customScopeId], references: [id])
+
   @@id([roleId, permissionId])
+  @@index([permissionId])
   @@map("role_permissions")
 }
 

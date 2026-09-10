@@ -1154,3 +1154,26 @@ export const DEFAULT_ROLES = [
 ] as const;
 
 export type DefaultRoleName = (typeof DEFAULT_ROLES)[number];
+
+/**
+ * Scope values, mirroring the `Scope` enum in `schema.prisma` (Functional Reference I3.1).
+ *
+ * Scope is attached **per permission, not per role** (Amendment A-001). It is deliberately a
+ * fixed set rather than admin-editable data: each value names a predicate `applyScope()` has
+ * to be able to build, so an invented eighth value would be a filter no code can express.
+ * The admin-authored escape hatch is `custom`, which points at a named `CustomScope`.
+ */
+export const SCOPES = [
+  'own',
+  'group',
+  'department',
+  'location',
+  'hierarchy',
+  'custom',
+  'all',
+] as const;
+
+export type ScopeValue = (typeof SCOPES)[number];
+
+/** Scopes whose meaning depends on walking a tree, and which therefore honour `scopeDepth`. */
+export const SUBTREE_SCOPES: readonly ScopeValue[] = ['department', 'location', 'hierarchy'];
