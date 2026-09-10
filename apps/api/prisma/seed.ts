@@ -94,7 +94,17 @@ async function main() {
     }
 
     await prisma.rolePermission.createMany({
-      data: keys.map((key) => ({ roleId: role.id, permissionId: permissionIdByKey.get(key)! })),
+      // Every grant states its scope — the column has no default, on purpose (see
+      // schema.prisma). `all` is correct for these specific grants and is not a widening:
+      // they are administrative permissions over configuration, which has no per-record
+      // ownership to scope by. The record-bearing permissions that *do* need narrower
+      // scopes (`request.view` at `own` or `group`) are granted in Slice 0d, where the
+      // twelve roles are composed.
+      data: keys.map((key) => ({
+        roleId: role.id,
+        permissionId: permissionIdByKey.get(key)!,
+        scope: 'all' as const,
+      })),
     });
   }
 

@@ -77,15 +77,27 @@ gap table, PROJECT_STATE §4b the detail):
   destructive and code-execution permission in the system before the privilege safety rules
   exist to constrain it. Interim grants until Slice 0d.
 
-- **Slice 0b — the access-control schema.** `Permission.module`/`is_sensitive`;
-  `PermissionSet` + `PermissionSetItem` + `RolePermissionSet`;
-  `RolePermission.scope`/`scope_depth`/`custom_scope_id`; **`UserRole`** (a user may hold
-  several roles — today's single `User.roleId` FK goes); `User.manager_id` +
-  `reporting_path`, with a **cycle check on every assignment** and subtree recomputation on
-  move.
+- **Slice 0b — the access-control schema. Split in two, because half of it is breaking.**
+  - **0b-1 (additive) ✅ DONE** — `20260910001748_access_control_scope_and_hierarchy`,
+    **ADR-0021**. `Scope` enum + `RolePermission.scope`/`scope_depth`/`custom_scope_id`;
+    `PermissionSet` + `PermissionSetItem` + `RolePermissionSet`; `CustomScope` (table only —
+    evaluation is Phase 3); `User.manager_id` + `reporting_path` with cycle rejection and
+    whole-subtree rewrite, reusing the same materialized-path helper the three classification
+    trees use. Predefined roles became permission-locked (Ref G3.4). `scope` has **no
+    default** — a grant must state what it reaches.
+  - **0b-2 (breaking) — still to do.** `UserRole`, replacing today's single `User.roleId` FK
+    so a user may hold several roles. This changes `SessionUserDto`, which Article V records
+    as having "diverged once and crashed the frontend", so it lands on its own.
+
+  `Permission.module`/`is_sensitive` were delivered earlier, with the manifest (ADR-0020).
+
 - **Slice 0c — `applyScope(query, user, permission)`.** One helper, the only place that knows
   what `department` means. Unit-tested per scope kind, including the null-department case.
-  ✅ **Its dependency, Slice 2b, is now merged** — all seven scope values in Ref I3.1 have
+  ✅ **Its dependencies are landing:** Slice 2b is merged, and 0b-1 (ADR-0021) adds the
+  `scope` column and the reporting tree it reads. What remains before 0c is 0b-2 (`UserRole`),
+  because resolving effective permissions iterates a user's _roles_, plural (7.3.3).
+
+  ✅ **Slice 2b is merged** — all seven scope values in Ref I3.1 have
   schema behind them (ADR-0018). Four did not before: `own` lacked watchers and
   collaborators, `group` had no table at all and was aliased onto `department`, `location`
   had no table or column anywhere, and `department` had no materialized path.
