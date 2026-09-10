@@ -10,26 +10,29 @@ import { UpdateUserDto } from './dto/update-user.dto';
 
 @ApiTags('users')
 @Controller('users')
-@RequirePermission(PERMISSIONS.USER_MANAGE)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
+  @RequirePermission(PERMISSIONS.USER_VIEW)
   findAll() {
     return this.usersService.findAll();
   }
 
   @Get(':id')
+  @RequirePermission(PERMISSIONS.USER_VIEW)
   findOne(@Param('id') id: string) {
     return this.usersService.findOneOrThrow(id);
   }
 
   @Post()
+  @RequirePermission(PERMISSIONS.USER_CREATE)
   create(@Body() dto: CreateUserDto, @CurrentUser() actor: AuthenticatedUser) {
     return this.usersService.create(dto, actor.id);
   }
 
   @Patch(':id')
+  @RequirePermission(PERMISSIONS.USER_EDIT)
   update(
     @Param('id') id: string,
     @Body() dto: UpdateUserDto,

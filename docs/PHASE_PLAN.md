@@ -61,11 +61,22 @@ foundations into Phase 0, because retrofitting scope enforcement onto built modu
 auditing every query in the system. Still outstanding, in dependency order (ADR-0017 has the
 gap table, PROJECT_STATE §4b the detail):
 
-- **Slice 0a — the permission manifest.** A versioned file in the repo seeding the ~150-entry
-  catalogue (Ref I2, `module.action[.qualifier]`), replacing the ten hand-maintained keys in
-  `seed.ts`. Reconciled on each release migration; new permissions seed
-  **disabled-by-default for existing custom roles** so an upgrade never silently widens
-  access (7.3.5).
+- **Slice 0a — the permission manifest.** ✅ **DONE** — `20260909232947_permission_manifest`,
+  **ADR-0020**. 174 permissions across 13 modules in
+  `packages/shared/src/permissions.ts`, reconciled into the `Permission` table rather than
+  inserted: new keys are created granted to nobody (which _is_ "disabled by default" — a
+  permission with no `RolePermission` confers nothing), removed keys are soft-deleted with a
+  warning naming the roles that held them. All ten pre-A-001 keys deprecate on upgrade, which
+  is the designed path rather than a fault. Guards on `roles` and `users` moved from
+  class-level to per-route, because Ref I2.5 separates view / create / edit / delete.
+
+  Proven against real HTTP in both directions: a zero-permission Requester gets 403 on
+  `/roles`, `/users`, `/audit-logs`, `/permissions` and 200 on `/auth/me`.
+
+  **Admin deliberately no longer holds everything** — against 174 keys that would grant every
+  destructive and code-execution permission in the system before the privilege safety rules
+  exist to constrain it. Interim grants until Slice 0d.
+
 - **Slice 0b — the access-control schema.** `Permission.module`/`is_sensitive`;
   `PermissionSet` + `PermissionSetItem` + `RolePermissionSet`;
   `RolePermission.scope`/`scope_depth`/`custom_scope_id`; **`UserRole`** (a user may hold

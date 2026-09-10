@@ -10,7 +10,7 @@ export class PermissionsController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get()
-  @RequirePermission(PERMISSIONS.PERMISSION_VIEW)
+  @RequirePermission(PERMISSIONS.ROLE_VIEW)
   findAll() {
     return this.prisma.permission.findMany({ orderBy: { key: 'asc' } });
   }

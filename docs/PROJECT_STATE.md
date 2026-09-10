@@ -527,6 +527,59 @@ schema cannot prevent it; only the helper can), and **type conversion** is desig
 built, because mapping a status onto the target type's workflow needs Slice 4's transition
 rules to exist first.
 
+### Phase 0 Slice 0a — the permission manifest (2026-09-10)
+
+Ten hand-listed keys in `seed.ts` became 174 in a versioned manifest, reconciled into the
+database rather than inserted. **ADR-0020** carries the decisions; three things are worth
+keeping here.
+
+**"Disabled by default for existing custom roles" (7.3.5) needed no disable step.** A
+`Permission` row with no `RolePermission` referencing it confers nothing, so the
+reconciliation creates permissions and grants them to nobody — there is no flag to set and
+therefore none to forget. Custom roles are never touched; only system roles have their grants
+re-asserted, from their own definition.
+
+**Every pre-A-001 key deprecates on upgrade, and that is the feature working.** All ten
+(`role.manage`, `audit.view`, `ticket.view.own`, …) appear nowhere in Ref I2. Run against a
+database that already held them: 174 added, 10 deprecated, each with a warning naming the
+roles that held it — `report.view.org` and `audit.view` naming both Admin and Auditor. Soft
+deleted, not dropped, so the grants stay visible for an access review.
+
+**Admin stopped getting everything, deliberately.** The old seed granted Admin every key it
+defined. Against ten illustrative keys that was a shortcut; against 174 it would hand one
+role every destructive and code-execution permission in the system — including
+`user.permission.grant`, which Ref I2.5 calls one of "the two most powerful permissions in
+the system" — before the privilege safety rules of 5.3a / Ref I8 exist to constrain it. Admin
+now holds the eleven keys the built admin screens actually need.
+
+**Two things the build taught rather than the docs:**
+
+- **A spec in `prisma/` never runs.** jest's `rootDir` is `src`, so the reconciliation's tests
+  were silently not executing. That was the signal to move the reconciler into
+  `src/common/permissions/` — it is application logic with rules, not seed data. `prisma/`
+  keeps reference data.
+- **`prisma generate` before `nest build` bit on the first opportunity.** Editing
+  `schema.prisma` and running `typecheck` produced seven "property does not exist" errors
+  until the client was regenerated — exactly the Prisma 7 ordering ADR-0019 had just
+  documented.
+
+**A migration detail worth not repeating badly:** `module` is `NOT NULL` with no default and
+the table is non-empty everywhere, so Prisma refuses the one-step add. It is added with a
+temporary default, backfilled with a `'legacy'` sentinel, and the default dropped. The
+sentinel is deliberate — those rows are about to be deprecated, and a plausible-looking
+module would only camouflage that.
+
+**Verified by running it.** From empty: migrations apply, 174 seed, a second run is a no-op.
+Both Docker stacks from clean volumes: production has the columns and an empty catalogue (it
+never seeds), dev reconciles in-container to 174 live / 63 sensitive / 13 modules and proxies
+through Vite. And the guard proven in both directions over real HTTP — a zero-permission
+Requester gets 403 on `/roles`, `/users`, `/audit-logs`, `/permissions` and 200 on
+`/auth/me`, while Admin's session carries exactly its eleven keys.
+
+**Still absent, and the reason Slice 3 must not start:** scope. `RolePermission` has no
+`scope` column (Slice 0b) and `applyScope()` does not exist (Slice 0c), so holding a key is
+still the whole of an authorization decision.
+
 ### Prisma 6.19.3 -> 7.10.0 (2026-09-09)
 
 The change §4 had been queued as "an architecture change, not a bump". It was, and the two
@@ -839,10 +892,13 @@ careless port of _that_ file is a silent data leak.
 
 ADR-0017 has the full gap table. In dependency order:
 
-1. **The permission manifest** — a versioned file in the repo that seeds the ~150-entry
-   catalogue (Ref I2), replacing the ten hand-maintained keys in `seed.ts`. New permissions
-   must seed **disabled-by-default for existing custom roles**, so an upgrade never silently
-   widens access (constitution 7.3.5).
+1. ~~**The permission manifest**~~ — ✅ **done, ADR-0020.** 174 permissions across 13
+   modules, reconciled rather than inserted. "Disabled by default" needed no disable step: a
+   `Permission` row with no `RolePermission` confers nothing, so new keys are simply created
+   and granted to nobody. Removed keys soft-delete with a warning naming the roles that held
+   them — verified against a populated database, where all ten pre-A-001 keys deprecated.
+   Guards and frontend migrated to the new keys; `role.manage` → `role.view`/`.create`/
+   `.edit`/`.delete`, `audit.view` → `security.audit.view`, and so on.
 2. **Schema:** `Permission.module`/`is_sensitive`; `PermissionSet` + `PermissionSetItem` +
    `RolePermissionSet`; `RolePermission.scope`/`scope_depth`/`custom_scope_id`; **`UserRole`**
    — a user may now hold several roles, so today's single `User.roleId` FK goes; and

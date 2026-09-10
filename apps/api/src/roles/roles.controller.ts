@@ -11,26 +11,29 @@ import { UpdateRolePermissionsDto } from './dto/update-role-permissions.dto';
 
 @ApiTags('roles')
 @Controller('roles')
-@RequirePermission(PERMISSIONS.ROLE_MANAGE)
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @Get()
+  @RequirePermission(PERMISSIONS.ROLE_VIEW)
   findAll() {
     return this.rolesService.findAll();
   }
 
   @Get(':id')
+  @RequirePermission(PERMISSIONS.ROLE_VIEW)
   findOne(@Param('id') id: string) {
     return this.rolesService.findOneOrThrow(id);
   }
 
   @Post()
+  @RequirePermission(PERMISSIONS.ROLE_CREATE)
   create(@Body() dto: CreateRoleDto, @CurrentUser() actor: AuthenticatedUser) {
     return this.rolesService.create(dto, actor.id);
   }
 
   @Patch(':id')
+  @RequirePermission(PERMISSIONS.ROLE_EDIT)
   rename(
     @Param('id') id: string,
     @Body() dto: UpdateRoleDto,
@@ -40,6 +43,7 @@ export class RolesController {
   }
 
   @Patch(':id/permissions')
+  @RequirePermission(PERMISSIONS.ROLE_EDIT)
   replacePermissions(
     @Param('id') id: string,
     @Body() dto: UpdateRolePermissionsDto,
@@ -49,6 +53,7 @@ export class RolesController {
   }
 
   @Delete(':id')
+  @RequirePermission(PERMISSIONS.ROLE_DELETE)
   delete(@Param('id') id: string, @CurrentUser() actor: AuthenticatedUser) {
     return this.rolesService.delete(id, actor.id);
   }

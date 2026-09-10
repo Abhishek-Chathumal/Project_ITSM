@@ -10,7 +10,7 @@ export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
   @Get()
-  @RequirePermission(PERMISSIONS.AUDIT_VIEW)
+  @RequirePermission(PERMISSIONS.SECURITY_AUDIT_VIEW)
   list(@Query('skip') skip?: string, @Query('take') take?: string) {
     return this.auditService.list({
       skip: skip ? parseInt(skip, 10) : undefined,
