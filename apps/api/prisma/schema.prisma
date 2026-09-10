@@ -72,12 +72,32 @@ model Role {
   @@map("roles")
 }
 
+/// One entry from the permission catalogue (Functional Reference I2), seeded from the
+/// versioned manifest in `@itsm/shared` — never created by hand (constitution 7.3.5).
+///
+/// `key` is the contract between code and data. Everything else is data the manifest owns:
+/// a re-seed re-asserts `module`, `description` and `isSensitive`, because those are
+/// statements the catalogue makes rather than anything an admin edits.
 model Permission {
   id          String           @id @default(uuid())
   key         String           @unique
+  /// Coarse grouping for the admin UI, mirroring Ref I2's sections.
+  module      String
   description String
+  /// Drives step-up MFA re-challenge (Ref I5) and optional approval-gating on the grant.
+  /// Set on anything that destroys data, escalates privilege, executes code, or exports.
+  isSensitive Boolean          @default(false) @map("is_sensitive")
+
+  /// Soft delete. Constitution 7.3.5: a permission dropped from the manifest is
+  /// **soft-deleted with a warning naming the roles that referenced it**, never removed.
+  /// A grant that vanishes silently is indistinguishable, at audit time, from one that was
+  /// never made — so the row stays and stops being grantable instead.
+  deprecatedAt DateTime?       @map("deprecated_at")
+
   roles       RolePermission[]
 
+  @@index([module])
+  @@index([deprecatedAt])
   @@map("permissions")
 }
 

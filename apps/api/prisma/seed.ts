@@ -2,38 +2,54 @@ import { createSeedClient } from './seed-client';
 import * as argon2 from 'argon2';
 import { DEFAULT_ROLES, PERMISSIONS } from '@itsm/shared';
 import { seedTicketing } from './seed-ticketing';
+import {
+  seedPermissions,
+  reportReconciliation,
+} from '../src/common/permissions/permission-reconciler';
 import { buildPath } from '../src/common/tree/materialized-path';
 
 const prisma = createSeedClient();
 
-const PERMISSION_CATALOG: Array<{ key: string; description: string }> = [
-  { key: PERMISSIONS.ROLE_MANAGE, description: 'Create, edit, delete roles and their permissions' },
-  { key: PERMISSIONS.PERMISSION_VIEW, description: 'View the permission catalog' },
-  { key: PERMISSIONS.USER_MANAGE, description: 'Create, edit, disable users' },
-  { key: PERMISSIONS.DEPARTMENT_MANAGE, description: 'Manage departments/teams' },
-  { key: PERMISSIONS.AUTOMATION_MANAGE, description: 'Configure automation rules' },
-  { key: PERMISSIONS.REPORT_VIEW_ORG, description: 'View organization-wide reports' },
-  { key: PERMISSIONS.AUDIT_VIEW, description: 'View the audit log' },
-  { key: PERMISSIONS.ORG_SETTINGS_MANAGE, description: 'Manage branding/org-wide settings' },
-  {
-    key: PERMISSIONS.TICKET_VIEW_OWN,
-    description: 'View own tickets (forward-declared for Phase 1)',
-  },
-  {
-    key: PERMISSIONS.TICKET_EDIT_ASSIGNED,
-    description: 'Edit tickets assigned to self (forward-declared for Phase 1)',
-  },
-];
+// The catalogue is no longer listed here. It is the versioned manifest in `@itsm/shared`,
+// applied by `seedPermissions()` — constitution 7.3.5 requires it to be a manifest checked
+// into the repo rather than a hand-maintained list in a seed script, and the ten keys that
+// used to live here were an illustrative subset of the ~174 in Functional Reference I2.
 
-// Least-privilege starter grants (Article III: new roles start with zero permissions;
-// only Admin/Auditor get anything meaningful in Phase 0 since no ticket features exist yet).
+/**
+ * Starter grants for the six system roles.
+ *
+ * ⚠️ **These are interim, and deliberately narrow.** Article III says a new role starts with
+ * **zero** permissions, and the real answer — twelve permission-locked roles composed from
+ * permission sets, each grant carrying a scope — is Slice 0d. Until then these grant only
+ * what the existing Phase 0 admin screens actually need, so nothing is silently widened by
+ * the catalogue growing from 10 entries to 174.
+ *
+ * **Admin does not get "everything" any more.** Under the old ten-key catalogue that was a
+ * defensible shortcut; against 174 keys it would hand one role every destructive and
+ * code-execution permission in the system, including `user.permission.grant`, before the
+ * privilege safety rules of 5.3a / Ref I8 exist to constrain it. Admin gets the
+ * administrative surface that is actually built, and nothing that guards a feature which
+ * does not exist yet.
+ */
 const ROLE_PERMISSION_GRANTS: Record<string, string[]> = {
   Requester: [],
   Technician: [],
   'Team Lead': [],
   'Change Manager': [],
-  Admin: PERMISSION_CATALOG.map((p) => p.key),
-  Auditor: [PERMISSIONS.AUDIT_VIEW, PERMISSIONS.REPORT_VIEW_ORG],
+  Admin: [
+    PERMISSIONS.USER_VIEW,
+    PERMISSIONS.USER_CREATE,
+    PERMISSIONS.USER_EDIT,
+    PERMISSIONS.ROLE_VIEW,
+    PERMISSIONS.ROLE_CREATE,
+    PERMISSIONS.ROLE_EDIT,
+    PERMISSIONS.ROLE_DELETE,
+    PERMISSIONS.ORG_DEPARTMENT_MANAGE,
+    PERMISSIONS.ORG_SETTINGS_MANAGE,
+    PERMISSIONS.SECURITY_AUDIT_VIEW,
+    PERMISSIONS.REPORT_VIEW,
+  ],
+  Auditor: [PERMISSIONS.SECURITY_AUDIT_VIEW, PERMISSIONS.REPORT_VIEW],
 };
 
 async function main() {
@@ -48,27 +64,38 @@ async function main() {
     roles.set(name, role);
   }
 
-  console.log('Seeding permission catalog...');
-  const permissions = new Map<string, { id: string }>();
-  for (const p of PERMISSION_CATALOG) {
-    const permission = await prisma.permission.upsert({
-      where: { key: p.key },
-      create: p,
-      update: { description: p.description },
-    });
-    permissions.set(p.key, permission);
-  }
+  console.log('Reconciling the permission manifest...');
+  const reconciliation = await seedPermissions(prisma);
+  reportReconciliation(reconciliation);
 
   console.log('Seeding role-permission grants...');
+  // Only the grants for system roles are re-asserted. A custom role an admin built is not
+  // touched here — which is the other half of 7.3.5's "disabled by default": the catalogue
+  // growing must not change what anyone already holds.
+  const grantable = await prisma.permission.findMany({
+    where: { deprecatedAt: null },
+    select: { id: true, key: true },
+  });
+  const permissionIdByKey = new Map(grantable.map((p) => [p.key, p.id]));
+
   for (const [roleName, keys] of Object.entries(ROLE_PERMISSION_GRANTS)) {
     const role = roles.get(roleName);
     if (!role) continue;
     await prisma.rolePermission.deleteMany({ where: { roleId: role.id } });
-    if (keys.length > 0) {
-      await prisma.rolePermission.createMany({
-        data: keys.map((key) => ({ roleId: role.id, permissionId: permissions.get(key)!.id })),
-      });
+    if (keys.length === 0) continue;
+
+    const missing = keys.filter((key) => !permissionIdByKey.has(key));
+    if (missing.length > 0) {
+      // A grant naming a key the catalogue does not contain is a bug in this file, not a
+      // condition to tolerate: it would silently give the role less than intended.
+      throw new Error(
+        `Role "${roleName}" is granted permission(s) absent from the manifest: ${missing.join(', ')}`,
+      );
     }
+
+    await prisma.rolePermission.createMany({
+      data: keys.map((key) => ({ roleId: role.id, permissionId: permissionIdByKey.get(key)! })),
+    });
   }
 
   console.log('Seeding default department...');
@@ -115,8 +142,9 @@ async function main() {
 
   await seedTicketing(prisma);
 
+  const permissionCount = await prisma.permission.count({ where: { deprecatedAt: null } });
   console.log(
-    `Seed complete: roles=${roles.size}, permissions=${permissions.size}, department=1, bootstrapAdmin=${adminCreated}`,
+    `Seed complete: roles=${roles.size}, permissions=${permissionCount}, department=1, bootstrapAdmin=${adminCreated}`,
   );
 }
 

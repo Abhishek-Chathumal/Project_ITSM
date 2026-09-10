@@ -49,7 +49,7 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         label: 'Reports',
         icon: ChartBar,
-        permission: PERMISSIONS.REPORT_VIEW_ORG,
+        permission: PERMISSIONS.REPORT_VIEW,
         comingSoon: true,
       },
     ],
@@ -57,17 +57,17 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Administration',
     items: [
-      { label: 'Users', icon: Users, permission: PERMISSIONS.USER_MANAGE, comingSoon: true },
+      { label: 'Users', icon: Users, permission: PERMISSIONS.USER_VIEW, comingSoon: true },
       {
         label: 'Roles & Permissions',
         icon: ShieldCheck,
-        permission: PERMISSIONS.ROLE_MANAGE,
+        permission: PERMISSIONS.ROLE_VIEW,
         comingSoon: true,
       },
       {
         label: 'Audit Trail',
         icon: ScrollText,
-        permission: PERMISSIONS.AUDIT_VIEW,
+        permission: PERMISSIONS.SECURITY_AUDIT_VIEW,
         comingSoon: true,
       },
       {

@@ -101,7 +101,7 @@ export default function DashboardPage() {
   const permissions = usePermissionCatalog();
   const audit = useAuditLogs();
 
-  const canSeeAudit = isAllowed(PERMISSIONS.AUDIT_VIEW);
+  const canSeeAudit = isAllowed(PERMISSIONS.SECURITY_AUDIT_VIEW);
 
   return (
     <>
@@ -124,13 +124,13 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         <StatTile label="Open tickets" value={undefined} placeholder="Phase 1" />
         <StatTile label="Overdue" value={undefined} placeholder="Phase 1" />
-        {isAllowed(PERMISSIONS.USER_MANAGE) && (
+        {isAllowed(PERMISSIONS.USER_VIEW) && (
           <StatTile label="Users" value={users.data?.length} tone="info" />
         )}
-        {isAllowed(PERMISSIONS.ROLE_MANAGE) && (
+        {isAllowed(PERMISSIONS.ROLE_VIEW) && (
           <StatTile label="Roles" value={roles.data?.length} tone="info" />
         )}
-        {isAllowed(PERMISSIONS.PERMISSION_VIEW) && (
+        {isAllowed(PERMISSIONS.ROLE_VIEW) && (
           <StatTile label="Permissions" value={permissions.data?.length} tone="info" />
         )}
         {canSeeAudit && <StatTile label="Audit events" value={audit.data?.length} tone="accent" />}

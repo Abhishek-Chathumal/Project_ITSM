@@ -17,7 +17,7 @@ export function useUsers() {
   return useQuery<UserDto[]>({
     queryKey: ['users'],
     queryFn: () => apiFetch<UserDto[]>('/users'),
-    enabled: isAllowed(PERMISSIONS.USER_MANAGE),
+    enabled: isAllowed(PERMISSIONS.USER_VIEW),
   });
 }
 
@@ -26,7 +26,7 @@ export function useRoles() {
   return useQuery<RoleDto[]>({
     queryKey: ['roles'],
     queryFn: () => apiFetch<RoleDto[]>('/roles'),
-    enabled: isAllowed(PERMISSIONS.ROLE_MANAGE),
+    enabled: isAllowed(PERMISSIONS.ROLE_VIEW),
   });
 }
 
@@ -35,7 +35,7 @@ export function usePermissionCatalog() {
   return useQuery<PermissionDto[]>({
     queryKey: ['permissions'],
     queryFn: () => apiFetch<PermissionDto[]>('/permissions'),
-    enabled: isAllowed(PERMISSIONS.PERMISSION_VIEW),
+    enabled: isAllowed(PERMISSIONS.ROLE_VIEW),
   });
 }
 
@@ -44,6 +44,6 @@ export function useAuditLogs() {
   return useQuery<AuditLogDto[]>({
     queryKey: ['audit-logs'],
     queryFn: () => apiFetch<AuditLogDto[]>('/audit-logs'),
-    enabled: isAllowed(PERMISSIONS.AUDIT_VIEW),
+    enabled: isAllowed(PERMISSIONS.SECURITY_AUDIT_VIEW),
   });
 }

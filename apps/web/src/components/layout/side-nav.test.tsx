@@ -37,7 +37,7 @@ describe('SideNav', () => {
   });
 
   it('shows only the administration entries the user actually holds', () => {
-    renderNav([PERMISSIONS.AUDIT_VIEW]);
+    renderNav([PERMISSIONS.SECURITY_AUDIT_VIEW]);
     expect(screen.getByText('Administration')).toBeInTheDocument();
     expect(screen.getByText('Audit Trail')).toBeInTheDocument();
     expect(screen.queryByText('Users')).not.toBeInTheDocument();

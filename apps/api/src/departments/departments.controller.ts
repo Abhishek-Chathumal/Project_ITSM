@@ -9,7 +9,7 @@ import { CreateDepartmentDto } from './dto/create-department.dto';
 
 @ApiTags('departments')
 @Controller('departments')
-@RequirePermission(PERMISSIONS.DEPARTMENT_MANAGE)
+@RequirePermission(PERMISSIONS.ORG_DEPARTMENT_MANAGE)
 export class DepartmentsController {
   constructor(private readonly departmentsService: DepartmentsService) {}
 
