@@ -63,8 +63,6 @@ model User {
   name         String
   email        String      @unique
   passwordHash String?     @map("password_hash")
-  roleId       String      @map("role_id")
-  role         Role        @relation(fields: [roleId], references: [id])
   departmentId String?     @map("department_id")
   department   Department? @relation(fields: [departmentId], references: [id])
   /// Where the person works. Ref B4 makes location a security filter and not only a label —
@@ -94,6 +92,12 @@ model User {
   /// scope is then an indexed prefix match instead of a recursive CTE per request — which is
   /// the entire reason the column exists.
   reportingPath String @default("") @map("reporting_path")
+
+  /// Roles are many-to-many (constitution 7.3.1: "A user may hold several roles"; the
+  /// User row in Part VII says "no `role_id` column"). A person who is both a Technician
+  /// and a Change Manager holds both, and their effective permissions are the union — which
+  /// a single FK could not express without inventing a combined role per pairing.
+  roles UserRole[]
 
   /// Technician group membership is many-to-many (Ref B1: "a technician may belong to
   /// several"). This is what `group` scope resolves through, and the reason it cannot be
@@ -131,7 +135,7 @@ model Role {
 
   permissions    RolePermission[]
   permissionSets RolePermissionSet[]
-  users          User[]
+  users          UserRole[]
 
   @@map("roles")
 }
@@ -218,6 +222,25 @@ model CustomScope {
 /// `key` is the contract between code and data. Everything else is data the manifest owns:
 /// a re-seed re-asserts `module`, `description` and `isSensitive`, because those are
 /// statements the catalogue makes rather than anything an admin edits.
+/// Role membership (constitution 7.3.1).
+///
+/// `assignedBy` and `assignedAt` are on the join rather than only in the audit log because
+/// "who granted this and when" is the first question an access review asks, and answering it
+/// by scanning the audit trail means it can only be answered while that trail is retained.
+model UserRole {
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId     String   @map("role_id")
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  assignedAt DateTime @default(now()) @map("assigned_at")
+  /// Null for memberships created by the seed or a migration, which have no human actor.
+  assignedBy String?  @map("assigned_by")
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
 model Permission {
   id          String           @id @default(uuid())
   key         String           @unique

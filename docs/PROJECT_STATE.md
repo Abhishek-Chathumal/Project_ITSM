@@ -918,6 +918,54 @@ locally rather than by any unit test.
 
 ## 4b. In flight — read before starting anything
 
+> ### ⏸️ PAUSED MID-SLICE: `claude/phase0-user-roles` (Slice 0b-2), 2026-09-10
+>
+> **The branch is pushed as an explicit WIP commit and does NOT pass the gate.** It carries a
+> schema change with no migration and no application code behind it yet. Do not merge it; do
+> not treat a red gate on it as a regression.
+>
+> **What is done:** `schema.prisma` only — `UserRole` added (userId, roleId, assignedAt,
+> assignedBy), `User.roleId` and its `role` relation removed, `Role.users` retargeted to
+> `UserRole[]`. `prisma validate` passes.
+>
+> **The exact blocker, and it needs a hand-written migration.** Prisma will not drop
+> `users.role_id` non-interactively — `migrate dev` refuses with _"Prisma Migrate has detected
+> that the environment is non-interactive"_, and `migrate diff --from-migrations` needs
+> `datasource.shadowDatabaseUrl` in `prisma.config.ts`, which is not set. **Do not add a
+> shadow database just for this.** Write `migration.sql` by hand, in this order — the order is
+> the whole point, because dropping the column first loses every user's role irrecoverably:
+>
+> ```sql
+> CREATE TABLE "user_roles" (...);
+> INSERT INTO "user_roles" ("user_id","role_id") SELECT "id","role_id" FROM "users";
+> ALTER TABLE "users" DROP COLUMN "role_id";
+> ```
+>
+> Then `prisma migrate deploy`, and confirm no drift with `prisma migrate status`.
+>
+> **What remains after the migration**, all of it downstream of removing one column:
+>
+> - `packages/shared/src/types.ts` — `SessionUserDto.role: RoleDto` → `roles: RoleDto[]`;
+>   `UserDto.roleId` → `roleIds: string[]`.
+> - `auth.service.ts` — `SESSION_USER_INCLUDE` and `toSessionUserDto()`; `permissions` becomes
+>   the **union of keys across roles**.
+> - `session-auth.guard.ts` — `AuthenticatedUser.roleId`/`roleName` → a roles array.
+> - `users.service.ts` + create/update DTOs — `roleId` → `roleIds`.
+> - `roles.service.ts` — deleting a role now has `UserRole` rows to consider.
+> - Frontend `user.role.name` in `top-bar.tsx` and `dashboard.tsx`.
+> - `seed.ts` — the bootstrap admin is created with `roleId`.
+>
+> **⚠️ Article V applies to this change specifically.** `/auth/login` and `/auth/me` must
+> return the _same_ `SessionUserDto` — they diverged once and crashed the frontend. Both go
+> through `toSessionUserDto()`; keep it that way.
+>
+> **Scope resolution across roles is deliberately NOT in this slice.** The guard answers "does
+> the caller hold this key?", so the union of keys is enough here. Deciding what `widest()`
+> means when one role grants `request.view` at `group` and another at `department` — two
+> scopes that are not comparable — belongs with `applyScope()` in Slice 0c, and is likely to
+> need its own ADR, because constitution 7.3.3 models the result as a single scope and the
+> honest answer may be a set of them OR'd together.
+
 **Branch `claude/ticket-api-rbac` is superseded. Rebuild it; do not rebase it.**
 
 It carries two commits of groundwork for Phase 1 Slice 3 — ticketing permission keys and
